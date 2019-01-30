@@ -4,10 +4,10 @@ Python Websocket API Test Client
 Python example that uses the Refinitiv Websocket interface to facilitate the consumption of realtime data.
 This example is meant to be a simplistic version of the commandline rmdstestclient test tool
 
-Mandatory arguments:
+Mandatory arguments:  
   -S SERVICE         service name to request from (default: None)
   
-optional arguments:
+Optional arguments:  
   -h, --help         show this help message and exit  
   -H HOST            hostname / ip of server (default: ads1)  
   -p PORT            port of the server (default: 15000)  
