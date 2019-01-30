@@ -104,15 +104,15 @@ def parse_args(args=None):
                         help='domain model')
     parser.add_argument('-t', dest='snapshot',
                         help='Snapshot request',
-                        default='False',
+                        default=False,
                         action='store_true')
     parser.add_argument('-X', dest='dump',
                         help='Dump to console',
-                        default='False',
+                        default=False,
                         action='store_true')
     parser.add_argument('-e', dest='autoExit',
                         help='Auto Exit after all items retrieved',
-                        default='False',
+                        default=False,
                         action='store_true')
     parser.add_argument('-et', dest='exitTime',
                         help='Exit after time in minutes (0=indefinite)',
@@ -133,7 +133,9 @@ if __name__ == '__main__':
                         opts.appID,
                         opts.position)
 
-    market_price.set_RicList(simpleRics,opts.domain)
+    market_price.dumpRcvd = opts.dump
+
+    market_price.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')

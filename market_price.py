@@ -29,6 +29,8 @@ position = socket.gethostbyname(socket.gethostname())
 ricList = []    # List of RICs to request
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
 domainModel = None  # Websocket interface defaults to MarketPrice if not specified
+snapshot = False
+dumpRcvd = False
 
 # Global Variables
 web_socket_app = None
@@ -42,10 +44,11 @@ def setLogin(u,a,p):
     user=u
     position=p
 
-def set_RicList(rList,rdm):
-    global ricList,domainModel
+def setRequestAttr(rList,rdm,snap):
+    global ricList,domainModel,snapshot
     ricList=rList
     domainModel=rdm
+    snapshot=snap
 
 def set_viewList(vList):
     global viewList
@@ -88,6 +91,8 @@ def send_market_price_request(ws):
         mp_req_json['View'] = viewList
     if (domainModel!=None):
         mp_req_json['Domain'] = domainModel
+    if snapshot:
+        mp_req_json['Streaming'] = False
 
     ws.send(json.dumps(mp_req_json))
     print("Send MP request")
@@ -121,9 +126,10 @@ def send_login_request(ws):
 
 def on_message(ws, message):
     """ Called when message received, parse message into JSON for processing """
-    print("RECEIVED: ")
     message_json = json.loads(message)
-    print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
+    if dumpRcvd:
+        print("RECEIVED: ")
+        print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
 
     for singleMsg in message_json:
         process_message(ws, singleMsg)
