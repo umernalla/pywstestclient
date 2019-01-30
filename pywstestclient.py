@@ -74,7 +74,7 @@ def parse_args(args=None):
                         required='True')
     parser.add_argument('-H', dest='host',
                         help='hostname / ip of server',
-                        default='p2ps')
+                        default='ads1')
     parser.add_argument('-p', dest='port',
                         help='port of the server',
                         type=int,
@@ -125,12 +125,11 @@ def parse_args(args=None):
 if __name__ == '__main__':
     opts = parse_args(sys.argv[1:])
     print(opts)
-    if check_options():
-        print('Valid parameters', simpleRics) 
-    else:
+    if not check_options():
         print('Exit due to invalid parameters')
         sys.exit(2)
-    
+
+    print('Valid parameters', simpleRics) 
     market_price.setLogin(opts.user,
                         opts.appID,
                         opts.position)
