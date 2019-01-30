@@ -13,8 +13,6 @@ simpleRics=None
 extRics=None
 opts=None
 ws_app=None
-#(appID='256', autoExit='False', domain='MarketPrice', dump='False', exitTime=0, host='localhost', itemList=None, password=None, port=15000, position='10.44.2.155', ricFile=None, ricFileExt=None, service='IDN', snapshot='False',
-#user='u8015059', viewFIDs=None)
 
 def readSimpleRicsFile():
     global simpleRics
@@ -45,11 +43,12 @@ def parse_rics():
 
 def validate_options():
 
-    if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  # Dont allow both FIDS and Field Names to be specifed for View request
+    # Dont allow both FIDS and Field Names to be specifed for View request
+    if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  
         print('Only one type of View allowed; -vfids or -vnames')
         return False
 
-    ricLists = (opts.itemList, opts.ricFile, opts.ricFileExt)   # Order of priority - if more than one specified
+    ricLists = (opts.itemList, opts.ricFile, opts.ricFileExt)
     ricListCnt=0
     for rics in ricLists:
         if (rics!=None):
@@ -158,9 +157,17 @@ if __name__ == '__main__':
     wst.start()
 
     try:
-        while True:
-            time.sleep(1)
+        if (opts.exitTime>0):   # Loop for x minutes
+            end_time = time.time() + 60*opts.exitTime
+            print("Run for", opts.exitTime, "minutes")
+            while time.time() < end_time:
+                time.sleep(1)
+        else:                   
+            while True:         # Loop for ever     
+                time.sleep(1)
     except KeyboardInterrupt:
+       pass
+    finally:
         ws_app.close()
 
 #    mydict = vars(opts)
