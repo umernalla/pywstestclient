@@ -43,7 +43,7 @@ def parse_rics():
     elif (opts.ricFileExt!=None):
         readExtRicsFile()
 
-def check_options():
+def validate_options():
 
     if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  # Dont allow both FIDS and Field Names to be specifed for View request
         print('Only one type of View allowed; -vfids or -vnames')
@@ -101,8 +101,7 @@ def parse_args(args=None):
     parser.add_argument('-ef', dest='ricFileExt',
                         help='multi domain file of RICs - e.g. 6|VOD.L')
     parser.add_argument('-md', dest='domain',
-                        help='domain model',
-                        default='MarketPrice')
+                        help='domain model')
     parser.add_argument('-t', dest='snapshot',
                         help='Snapshot request',
                         default='False',
@@ -125,7 +124,7 @@ def parse_args(args=None):
 if __name__ == '__main__':
     opts = parse_args(sys.argv[1:])
     print(opts)
-    if not check_options():
+    if not validate_options():
         print('Exit due to invalid parameters')
         sys.exit(2)
 
@@ -134,7 +133,7 @@ if __name__ == '__main__':
                         opts.appID,
                         opts.position)
 
-    market_price.set_RicList(simpleRics)
+    market_price.set_RicList(simpleRics,opts.domain)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')

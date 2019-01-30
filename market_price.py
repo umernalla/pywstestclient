@@ -28,6 +28,7 @@ app_id = '256'
 position = socket.gethostbyname(socket.gethostname())
 ricList = []    # List of RICs to request
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
+domainModel = None  # Websocket interface defaults to MarketPrice if not specified
 
 # Global Variables
 web_socket_app = None
@@ -41,9 +42,10 @@ def setLogin(u,a,p):
     user=u
     position=p
 
-def set_RicList(rList):
-    global ricList
+def set_RicList(rList,rdm):
+    global ricList,domainModel
     ricList=rList
+    domainModel=rdm
 
 def set_viewList(vList):
     global viewList
@@ -82,8 +84,10 @@ def send_market_price_request(ws):
             'Name': ricList,
         },
     }
-    if (viewList!=None):
+    if (len(viewList)>0):
         mp_req_json['View'] = viewList
+    if (domainModel!=None):
+        mp_req_json['Domain'] = domainModel
 
     ws.send(json.dumps(mp_req_json))
     print("Send MP request")
