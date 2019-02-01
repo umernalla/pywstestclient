@@ -29,8 +29,9 @@ position = socket.gethostbyname(socket.gethostname())
 ricList = []    # List of RICs to request
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
 domainModel = None  # Websocket interface defaults to MarketPrice if not specified
-snapshot = False
-dumpRcvd = False
+snapshot = False    # Make Snapshot request (rather than the default streaming)
+dumpRcvd = False    # Dump messages received from server
+dumpPP = False      # Dump the incoming Ping and outgoing Pong messages
 
 imgCnt = 0
 updCnt = 0
@@ -42,7 +43,7 @@ web_socket_open = False
 
 def print_stats():
     global imgCnt, updCnt, statusCnt, pingCnt
-    print("Stats; Refresh:",imgCnt," Updates:",updCnt," Status:",statusCnt)
+    print("Stats; Refresh:",imgCnt," Updates:",updCnt," Status:",statusCnt,"Pings:",pingCnt)
 
 def setLogin(u,a,p):
     global user, app_id, position
@@ -89,8 +90,10 @@ def process_message(ws, message_json):
         pingCnt += 1
         pong_json = { 'Type':'Pong' }
         ws.send(json.dumps(pong_json))
-        print("SENT:")
-        print(json.dumps(pong_json, sort_keys=True, indent=2, separators=(',', ':')))
+        if (dumpPP):
+            print("RCVD:", json.dumps(message_json, sort_keys=True, indent=None, separators=(',', ':')))
+            print("SENT:", json.dumps(pong_json, sort_keys=True, indent=None, separators=(',', ':')))
+            #print(json.dumps(pong_json, sort_keys=True, indent=2, separators=(',', ':')))
 
 
 def process_login_response(ws, message_json):

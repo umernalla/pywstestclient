@@ -42,7 +42,7 @@ def parse_rics():
         readExtRicsFile()
 
 def validate_options():
-
+    global opts
     # Dont allow both FIDS and Field Names to be specifed for View request
     if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  
         print('Only one type of View allowed; -vfids or -vnames')
@@ -62,6 +62,9 @@ def validate_options():
         return False
     else:
         parse_rics()
+
+    if (opts.exitTimeMins>0) and (opts.statsTimeSecs > (opts.exitTimeMins*60)):
+        opts.statsTimeSecs ==  opts.exitTimeMins*60
 
     return True
 
@@ -113,10 +116,18 @@ def parse_args(args=None):
                         help='Auto Exit after all items retrieved',
                         default=False,
                         action='store_true')
-    parser.add_argument('-et', dest='exitTime',
+    parser.add_argument('-et', dest='exitTimeMins',
                         help='Exit after time in minutes (0=indefinite)',
                         type=int,
                         default=0)
+    parser.add_argument('-st', dest='statsTimeSecs',
+                        help='Show Statistics interval in seconds',
+                        type=int,
+                        default=10)
+    parser.add_argument('-sp', dest='showPingPong',
+                        help='Output Ping and Pong heartbeat messages',
+                        default=False,
+                        action='store_true')
     
     return (parser.parse_args(args))
 
@@ -133,6 +144,7 @@ if __name__ == '__main__':
                         opts.position)
 
     market_price.dumpRcvd = opts.dump
+    market_price.dumpPP = opts.showPingPong
 
     market_price.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
 
@@ -157,20 +169,22 @@ if __name__ == '__main__':
     wst.start()
 
     try:
-        if (opts.exitTime>0):   # Loop for x minutes
-            end_time = time.time() + 60*opts.exitTime
-            print("Run for", opts.exitTime, "minutes")
+        if (opts.exitTimeMins>0):   # Loop for x minutes
+            end_time = time.time() + 60*opts.exitTimeMins
+            print("Run for", opts.exitTimeMins, "minutes")
             while time.time() < end_time:
-                time.sleep(30)
+                time.sleep(opts.statsTimeSecs)
                 market_price.print_stats()
         else:                   
             while True:         # Loop for ever     
                 market_price.print_stats()
-                time.sleep(30)
+                time.sleep(opts.statsTimeSecs)
     except KeyboardInterrupt:
        pass
     finally:
         ws_app.close()
+        
+    market_price.print_stats()
 
 #    mydict = vars(opts)
 #    print('Invoked with the following options')
