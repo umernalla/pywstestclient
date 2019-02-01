@@ -22,6 +22,9 @@ Optional arguments:
   -t                 Snapshot request (default: False)  
   -X                 Dump to console (default: False)  
   -et EXITTIME       Exit after time in minutes (0=indefinite) (default: 0)  
+  -st STATSTIMESECS  Show Statistics interval in seconds (default: 10)  
+  -ss                Output the JSON messages sent to server (default: False)  
+  -sp                Output Ping and Pong heartbeat messages (default: False)  
   
 NOT YET IMPLEMENTED  
   -pw PASSWORD       EDP user password (default: None)  
