@@ -161,10 +161,12 @@ if __name__ == '__main__':
             end_time = time.time() + 60*opts.exitTime
             print("Run for", opts.exitTime, "minutes")
             while time.time() < end_time:
-                time.sleep(1)
+                time.sleep(30)
+                market_price.print_stats()
         else:                   
             while True:         # Loop for ever     
-                time.sleep(1)
+                market_price.print_stats()
+                time.sleep(30)
     except KeyboardInterrupt:
        pass
     finally:
@@ -174,3 +176,5 @@ if __name__ == '__main__':
 #    print('Invoked with the following options')
 #    for myarg in mydict:
 #        print (myarg, ':', mydict[myarg])
+#
+# python pwtestclient -S ELEKTRON_DD -h ads1 -p 5900 -items VOD.L,BT.L,BP.L

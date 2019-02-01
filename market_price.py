@@ -32,14 +32,20 @@ domainModel = None  # Websocket interface defaults to MarketPrice if not specifi
 snapshot = False
 dumpRcvd = False
 
-# Global Variables
+imgCnt = 0
+updCnt = 0
+statusCnt = 0
+pingCnt = 0
+
 web_socket_app = None
 web_socket_open = False
 
+def print_stats():
+    global imgCnt, updCnt, statusCnt, pingCnt
+    print("Stats; Refresh:",imgCnt," Updates:",updCnt," Status:",statusCnt)
+
 def setLogin(u,a,p):
-    global user
-    global app_id
-    global position
+    global user, app_id, position
     app_id=a
     user=u
     position=p
@@ -57,15 +63,30 @@ def set_viewList(vList):
 
 
 def process_message(ws, message_json):
+    global imgCnt, updCnt, statusCnt, pingCnt
+
     """ Parse at high level and output JSON of message """
     message_type = message_json['Type']
+    
+    message_domain = "MarketPrice"  # Dont get Domain in MarketPrice message
+    if 'Domain' in message_json:
+        message_domain = message_json['Domain']
 
     if message_type == "Refresh":
-        if 'Domain' in message_json:
-            message_domain = message_json['Domain']
-            if message_domain == "Login":
-                process_login_response(ws, message_json)
+        if message_domain == "Login":
+            process_login_response(ws, message_json)
+        else:
+            imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
+    elif message_type == "Update":
+        updCnt += 1
+    elif message_type == "Status":
+        if message_domain != "Login":
+            statusCnt += 1
+        else:
+            print("LOGIN STATUS:")      # We got a Login status so report it
+            print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
     elif message_type == "Ping":
+        pingCnt += 1
         pong_json = { 'Type':'Pong' }
         ws.send(json.dumps(pong_json))
         print("SENT:")
