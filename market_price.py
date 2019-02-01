@@ -32,6 +32,7 @@ domainModel = None  # Websocket interface defaults to MarketPrice if not specifi
 snapshot = False    # Make Snapshot request (rather than the default streaming)
 dumpRcvd = False    # Dump messages received from server
 dumpPP = False      # Dump the incoming Ping and outgoing Pong messages
+dumpSent = False    # Dump out the Requests to the SENT to the server
 
 imgCnt = 0
 updCnt = 0
@@ -91,14 +92,12 @@ def process_message(ws, message_json):
         pong_json = { 'Type':'Pong' }
         ws.send(json.dumps(pong_json))
         if (dumpPP):
-            print("RCVD:", json.dumps(message_json, sort_keys=True, indent=None, separators=(',', ':')))
-            print("SENT:", json.dumps(pong_json, sort_keys=True, indent=None, separators=(',', ':')))
-            #print(json.dumps(pong_json, sort_keys=True, indent=2, separators=(',', ':')))
+            print("RCVD:", json.dumps(message_json),
+                    " SENT:", json.dumps(pong_json))
 
 
 def process_login_response(ws, message_json):
     """ Send item request """
-    print("Sending MP request")
     send_market_price_request(ws)
 
 
@@ -119,10 +118,9 @@ def send_market_price_request(ws):
         mp_req_json['Streaming'] = False
 
     ws.send(json.dumps(mp_req_json))
-    print("Send MP request")
-
-    print("SENT:")
-    print(json.dumps(mp_req_json, sort_keys=True, indent=2, separators=(',', ':')))
+    if (dumpSent):
+        print("SENT MP Request:")
+        print(json.dumps(mp_req_json, sort_keys=True, indent=2, separators=(',', ':')))
 
 
 def send_login_request(ws):
@@ -144,15 +142,16 @@ def send_login_request(ws):
     login_json['Key']['Elements']['Position'] = position
 
     ws.send(json.dumps(login_json))
-    print("SENT:")
-    print(json.dumps(login_json, sort_keys=True, indent=2, separators=(',', ':')))
+    if (dumpSent):
+        print("SENT Login Request:")
+        print(json.dumps(login_json, sort_keys=True, indent=2, separators=(',', ':')))
 
 
 def on_message(ws, message):
     """ Called when message received, parse message into JSON for processing """
     message_json = json.loads(message)
     if dumpRcvd:
-        print("RECEIVED: ")
+        print("RCVD: ")
         print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
 
     for singleMsg in message_json:
@@ -175,6 +174,7 @@ def on_open(ws):
     """ Called when handshake is complete and websocket is open, send login """
 
     print("WebSocket successfully connected!")
+    print_stats()
     global web_socket_open
     web_socket_open = True
     send_login_request(ws)

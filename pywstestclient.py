@@ -124,6 +124,10 @@ def parse_args(args=None):
                         help='Show Statistics interval in seconds',
                         type=int,
                         default=10)
+    parser.add_argument('-ss', dest='showSentMsgs',
+                        help='Output the JSON messages sent to server',
+                        default=False,
+                        action='store_true')
     parser.add_argument('-sp', dest='showPingPong',
                         help='Output Ping and Pong heartbeat messages',
                         default=False,
@@ -138,13 +142,14 @@ if __name__ == '__main__':
         print('Exit due to invalid parameters')
         sys.exit(2)
 
-    print('Valid parameters', simpleRics) 
+    #print('Valid parameters', simpleRics) 
     market_price.setLogin(opts.user,
                         opts.appID,
                         opts.position)
 
     market_price.dumpRcvd = opts.dump
     market_price.dumpPP = opts.showPingPong
+    market_price.dumpSent = opts.showSentMsgs
 
     market_price.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
 
@@ -171,14 +176,15 @@ if __name__ == '__main__':
     try:
         if (opts.exitTimeMins>0):   # Loop for x minutes
             end_time = time.time() + 60*opts.exitTimeMins
-            print("Run for", opts.exitTimeMins, "minutes")
+            print("Run for", opts.exitTimeMins, "minute(s)")
             while time.time() < end_time:
                 time.sleep(opts.statsTimeSecs)
                 market_price.print_stats()
         else:                   
+            print("Run indefinitely - CTRL+C to break")
             while True:         # Loop for ever     
-                market_price.print_stats()
                 time.sleep(opts.statsTimeSecs)
+                market_price.print_stats()
     except KeyboardInterrupt:
        pass
     finally:
