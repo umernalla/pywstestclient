@@ -18,9 +18,11 @@ import websocket
 import threading
 from threading import Thread, Event
 
-# Global Default Variables use by __main__
+# Global Default Variables for connection
 hostname = 'localhost'  
 port = '15000'   
+ping_timeout_interval = 30  # How often do we expect to recieve Ping from server
+ping_timeout_time = 0       # If not received a Ping by this time then timeout and exit
 
 # Other Global default variables
 user = 'user'       # Default username for ADS login
@@ -50,13 +52,13 @@ def print_stats():
     global imgCnt, updCnt, statusCnt, pingCnt
     print("Stats; Refresh:",imgCnt," Updates:",updCnt," Status:",statusCnt,"Pings:",pingCnt)
 
-def setLogin(u,a,p):
+def set_Login(u,a,p):
     global user, app_id, position
     app_id=a
     user=u
     position=p
 
-def setRequestAttr(rList,rdm,snap):
+def set_Request_Attr(rList,rdm,snap):
     global ricList,domainModel,snapshot
     ricList=rList
     domainModel=rdm
@@ -70,8 +72,18 @@ def set_viewList(vList):
 def cleanup(ws):
     global shutdown_app
     send_login_close(ws)
-    shutdown_app=True
-    #ws.close()     # Cannot use due to Websocket client issue
+    shutdown_app=True   # signal to main loop to exit
+    #ws.close()     # Cannot use due to Websocket client issue/bug
+
+def reset_ping_time():          # We can call this each time we send or receive a message 
+    global ping_timeout_time    # to reset the timeout for the next ping
+    ping_timeout_time = time.time() + ping_timeout_interval
+
+def check_ping_timedout():    # Has it been too long since last ping
+    global shutdown_app
+    if (ping_timeout_time > 0) and (time.time() > ping_timeout_time):
+        print("No ping from server, timing out")
+        shutdown_app = True
 
 def process_message(ws, message_json):
     global imgCnt, updCnt, statusCnt, pingCnt
@@ -108,6 +120,9 @@ def process_message(ws, message_json):
 
 
 def process_login_response(ws, message_json):
+    # Get Ping timeout interval from server
+    global ping_timeout_interval
+    ping_timeout_interval = int(message_json['Elements']['PingTimeout'])
     """ Send item request """
     send_market_price_request(ws)
 
@@ -179,6 +194,8 @@ def on_message(ws, message):
 
     for singleMsg in message_json:
         process_message(ws, singleMsg)
+    # We have received a message from server - so reset the Ping timeout
+    reset_ping_time()
 
 def on_error(ws, error):
     """ Called when websocket error has occurred """
@@ -187,61 +204,19 @@ def on_error(ws, error):
 
 def on_close(ws):
     """ Called when websocket is closed """
-    global web_socket_closed,web_socket_open
+    global web_socket_open, shutdown_app
     print("WebSocket Closed")
-    web_socket_closed = True
     web_socket_open = False
+    shutdown_app = True
 
 def on_open(ws):
     """ Called when handshake is complete and websocket is open, send login """
 
     print("WebSocket successfully connected!")
     print_stats()
-    global web_socket_open,web_socket_closed
+    global web_socket_open
     web_socket_open = True
-    web_socket_closed = False
+    reset_ping_time()
     send_login_request(ws)
 
 
-# if __name__ == "__main__":
-
-#     # Get command line parameters
-#     try:
-#         opts, args = getopt.getopt(sys.argv[1:], "", ["help", "hostname=", "port=", "app_id=", "user=", "position="])
-#     except getopt.GetoptError:
-#         print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
-#         sys.exit(2)
-#     for opt, arg in opts:
-#         if opt in ("--help"):
-#             print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
-#             sys.exit(0)
-#         elif opt in ("--hostname"):
-#             hostname = arg
-#         elif opt in ("--port"):
-#             port = arg
-#         elif opt in ("--app_id"):
-#             app_id = arg
-#         elif opt in ("--user"):
-#             user = arg
-#         elif opt in ("--position"):
-#             position = arg
-
-#     # Start websocket handshake
-#     ws_address = "ws://{}:{}/WebSocket".format(hostname, port)
-#     print("Connecting to WebSocket " + ws_address + " ...")
-#     web_socket_app = websocket.WebSocketApp(ws_address, header=['User-Agent: Python'],
-#                                         on_message=on_message,
-#                                         on_error=on_error,
-#                                         on_close=on_close,
-#                                         subprotocols=['tr_json2'])
-#     web_socket_app.on_open = on_open
-
-#     # Event loop
-#     wst = threading.Thread(target=web_socket_app.run_forever)
-#     wst.start()
-
-#     try:
-#         while True:
-#             time.sleep(1)
-#     except KeyboardInterrupt:
-#         web_socket_app.close()

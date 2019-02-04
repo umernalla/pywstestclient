@@ -143,7 +143,7 @@ if __name__ == '__main__':
         sys.exit(2)
 
     #print('Valid parameters', simpleRics) 
-    market_data.setLogin(opts.user,
+    market_data.set_Login(opts.user,
                         opts.appID,
                         opts.position)
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
         opts.snapshot=True
         print("AutoExit selected so enabling Snapshot mode too")
 
-    market_data.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
+    market_data.set_Request_Attr(simpleRics,opts.domain,opts.snapshot)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')
@@ -180,31 +180,26 @@ if __name__ == '__main__':
 
     try:
         stat_time = time.time() + opts.statsTimeSecs
+        end_time = None
         if (opts.exitTimeMins>0):   # Loop for x minutes
             end_time = time.time() + 60*opts.exitTimeMins
             print("Run for", opts.exitTimeMins, "minute(s)")
-            while (time.time() < end_time) and (not market_data.shutdown_app):
-                time.sleep(1)
-                if (time.time() >= stat_time):
-                    market_data.print_stats()
-                    stat_time = time.time() + opts.statsTimeSecs
-        else:                   
+        else:
             print("Run indefinitely - CTRL+C to break")
-            # Loop as long as websocket is open     
-            while not market_data.shutdown_app:         
-                time.sleep(1)
-                if (time.time() >= stat_time):
-                    market_data.print_stats()
-                    stat_time = time.time() + opts.statsTimeSecs
+
+        while (((opts.exitTimeMins==0) or (time.time() < end_time)) 
+                    and (not market_data.shutdown_app)):
+            time.sleep(1)
+            market_data.check_ping_timedout()
+            if (time.time() >= stat_time):
+                market_data.print_stats()
+                stat_time = time.time() + opts.statsTimeSecs
+
     except KeyboardInterrupt:
         pass
     finally:
         ws_app.close()
         market_data.print_stats()
 
-#    mydict = vars(opts)
-#    print('Invoked with the following options')
-#    for myarg in mydict:
-#        print (myarg, ':', mydict[myarg])
 #
 # python pywstestclient.py -S ELEKTRON_DD -H ads1 -p 5900 -items VOD.L,BT.L,BP.L -u umer.nalla -e
