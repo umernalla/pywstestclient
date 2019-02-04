@@ -3,7 +3,7 @@ import argparse
 import sys
 import socket
 import getpass
-import market_price
+import market_data
 import websocket
 import threading
 from threading import Thread, Event
@@ -143,37 +143,37 @@ if __name__ == '__main__':
         sys.exit(2)
 
     #print('Valid parameters', simpleRics) 
-    market_price.setLogin(opts.user,
+    market_data.setLogin(opts.user,
                         opts.appID,
                         opts.position)
 
-    market_price.dumpRcvd = opts.dump
-    market_price.dumpPP = opts.showPingPong
-    market_price.dumpSent = opts.showSentMsgs
-    market_price.autoExit = opts.autoExit
+    market_data.dumpRcvd = opts.dump
+    market_data.dumpPP = opts.showPingPong
+    market_data.dumpSent = opts.showSentMsgs
+    market_data.autoExit = opts.autoExit
 
     if (opts.autoExit):
         opts.snapshot=True
         print("AutoExit selected so enabling Snapshot mode too")
 
-    market_price.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
+    market_data.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')
-        market_price.set_viewList(vList)
+        market_data.set_viewList(vList)
     elif (opts.viewFIDs!=None):
         vList = list(map(int, opts.viewFIDs.split(',')))
-        market_price.set_viewList(vList)
+        market_data.set_viewList(vList)
 
     # Start websocket handshake
     ws_address = "ws://{}:{}/WebSocket".format(opts.host, opts.port)
     print("Connecting to WebSocket " + ws_address + " ...")
     ws_app = websocket.WebSocketApp(ws_address, header=['User-Agent: Python'],
-                                        on_message=market_price.on_message,
-                                        on_error=market_price.on_error,
-                                        on_close=market_price.on_close,
+                                        on_message=market_data.on_message,
+                                        on_error=market_data.on_error,
+                                        on_close=market_data.on_close,
                                         subprotocols=['tr_json2'])
-    ws_app.on_open = market_price.on_open
+    ws_app.on_open = market_data.on_open
     # Event loop
     wst = threading.Thread(target=ws_app.run_forever)
     wst.start()
@@ -183,24 +183,24 @@ if __name__ == '__main__':
         if (opts.exitTimeMins>0):   # Loop for x minutes
             end_time = time.time() + 60*opts.exitTimeMins
             print("Run for", opts.exitTimeMins, "minute(s)")
-            while (time.time() < end_time) and (not market_price.shutdown_app):
+            while (time.time() < end_time) and (not market_data.shutdown_app):
                 time.sleep(1)
                 if (time.time() >= stat_time):
-                    market_price.print_stats()
+                    market_data.print_stats()
                     stat_time = time.time() + opts.statsTimeSecs
         else:                   
             print("Run indefinitely - CTRL+C to break")
             # Loop as long as websocket is open     
-            while not market_price.shutdown_app:         
+            while not market_data.shutdown_app:         
                 time.sleep(1)
                 if (time.time() >= stat_time):
-                    market_price.print_stats()
+                    market_data.print_stats()
                     stat_time = time.time() + opts.statsTimeSecs
     except KeyboardInterrupt:
         pass
     finally:
         ws_app.close()
-        market_price.print_stats()
+        market_data.print_stats()
 
 #    mydict = vars(opts)
 #    print('Invoked with the following options')
