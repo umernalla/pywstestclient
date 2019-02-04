@@ -7,7 +7,7 @@
 
 
 #!/usr/bin/env python
-""" Simple example of outputting Market Price JSON data using Websockets """
+""" Simple example of requesting Reuters domain Models using Websockets """
 
 import sys
 import time
@@ -23,8 +23,8 @@ hostname = 'localhost'
 port = '15000'   
 
 # Other Global default variables
-user = 'user'
-app_id = '256'
+user = 'user'       # Default username for ADS login
+app_id = '256'      # Default application ID for login
 position = socket.gethostbyname(socket.gethostname())
 ricList = []    # List of RICs to request
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
@@ -33,14 +33,18 @@ snapshot = False    # Make Snapshot request (rather than the default streaming)
 dumpRcvd = False    # Dump messages received from server
 dumpPP = False      # Dump the incoming Ping and outgoing Pong messages
 dumpSent = False    # Dump out the Requests to the SENT to the server
+autoExit = False    # Exit once Refresh (or Status closed) received for all requests
 
-imgCnt = 0
-updCnt = 0
-statusCnt = 0
-pingCnt = 0
+reqCnt = 0      # Number of Data Items requested
+imgCnt = 0      # Data Refresh messages received
+updCnt = 0      # Update messages received
+statusCnt = 0   # Status messages received
+pingCnt = 0     # Ping messages (= Pongs sent)
+closedCnt = 0   # Specifically Closed status message (e.g. item not found)
 
 web_socket_app = None
 web_socket_open = False
+shutdown_app = False
 
 def print_stats():
     global imgCnt, updCnt, statusCnt, pingCnt
@@ -63,6 +67,11 @@ def set_viewList(vList):
     viewList=vList
     print("Set viewList to", viewList, "from", vList)
 
+def cleanup(ws):
+    global shutdown_app
+    send_login_close(ws)
+    shutdown_app=True
+    #ws.close()     # Cannot use due to Websocket client issue
 
 def process_message(ws, message_json):
     global imgCnt, updCnt, statusCnt, pingCnt
@@ -79,6 +88,8 @@ def process_message(ws, message_json):
             process_login_response(ws, message_json)
         else:
             imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
+            if ((imgCnt==reqCnt) and autoExit):
+                cleanup(ws)
     elif message_type == "Update":
         updCnt += 1
     elif message_type == "Status":
@@ -102,7 +113,10 @@ def process_login_response(ws, message_json):
 
 
 def send_market_price_request(ws):
+    global reqCnt
     """ Create and send simple Market Price request """
+
+    reqCnt = len(ricList)
 
     mp_req_json = {
         'ID': 2,
@@ -136,15 +150,24 @@ def send_login_request(ws):
             }
         }
     }
-
     login_json['Key']['Name'] = user
     login_json['Key']['Elements']['ApplicationId'] = app_id
     login_json['Key']['Elements']['Position'] = position
-
     ws.send(json.dumps(login_json))
     if (dumpSent):
         print("SENT Login Request:")
         print(json.dumps(login_json, sort_keys=True, indent=2, separators=(',', ':')))
+
+def send_login_close(ws):
+    logout_json = {
+        'Domain': 'Login',
+        'ID': 1,
+        'Type': 'Close'
+    }
+    ws.send(json.dumps(logout_json))
+    if (dumpSent):
+        print("SENT Logout Request:")
+        print(json.dumps(logout_json, sort_keys=True, indent=2, separators=(',', ':')))
 
 
 def on_message(ws, message):
@@ -157,7 +180,6 @@ def on_message(ws, message):
     for singleMsg in message_json:
         process_message(ws, singleMsg)
 
-
 def on_error(ws, error):
     """ Called when websocket error has occurred """
     print(error)
@@ -165,60 +187,61 @@ def on_error(ws, error):
 
 def on_close(ws):
     """ Called when websocket is closed """
-    global web_socket_open
+    global web_socket_closed,web_socket_open
     print("WebSocket Closed")
+    web_socket_closed = True
     web_socket_open = False
-
 
 def on_open(ws):
     """ Called when handshake is complete and websocket is open, send login """
 
     print("WebSocket successfully connected!")
     print_stats()
-    global web_socket_open
+    global web_socket_open,web_socket_closed
     web_socket_open = True
+    web_socket_closed = False
     send_login_request(ws)
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    # Get command line parameters
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "", ["help", "hostname=", "port=", "app_id=", "user=", "position="])
-    except getopt.GetoptError:
-        print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("--help"):
-            print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
-            sys.exit(0)
-        elif opt in ("--hostname"):
-            hostname = arg
-        elif opt in ("--port"):
-            port = arg
-        elif opt in ("--app_id"):
-            app_id = arg
-        elif opt in ("--user"):
-            user = arg
-        elif opt in ("--position"):
-            position = arg
+#     # Get command line parameters
+#     try:
+#         opts, args = getopt.getopt(sys.argv[1:], "", ["help", "hostname=", "port=", "app_id=", "user=", "position="])
+#     except getopt.GetoptError:
+#         print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
+#         sys.exit(2)
+#     for opt, arg in opts:
+#         if opt in ("--help"):
+#             print('Usage: market_price.py [--hostname hostname] [--port port] [--app_id app_id] [--user user] [--position position] [--help]')
+#             sys.exit(0)
+#         elif opt in ("--hostname"):
+#             hostname = arg
+#         elif opt in ("--port"):
+#             port = arg
+#         elif opt in ("--app_id"):
+#             app_id = arg
+#         elif opt in ("--user"):
+#             user = arg
+#         elif opt in ("--position"):
+#             position = arg
 
-    # Start websocket handshake
-    ws_address = "ws://{}:{}/WebSocket".format(hostname, port)
-    print("Connecting to WebSocket " + ws_address + " ...")
-    web_socket_app = websocket.WebSocketApp(ws_address, header=['User-Agent: Python'],
-                                        on_message=on_message,
-                                        on_error=on_error,
-                                        on_close=on_close,
-                                        subprotocols=['tr_json2'])
-    web_socket_app.on_open = on_open
+#     # Start websocket handshake
+#     ws_address = "ws://{}:{}/WebSocket".format(hostname, port)
+#     print("Connecting to WebSocket " + ws_address + " ...")
+#     web_socket_app = websocket.WebSocketApp(ws_address, header=['User-Agent: Python'],
+#                                         on_message=on_message,
+#                                         on_error=on_error,
+#                                         on_close=on_close,
+#                                         subprotocols=['tr_json2'])
+#     web_socket_app.on_open = on_open
 
-    # Event loop
-    wst = threading.Thread(target=web_socket_app.run_forever)
-    wst.start()
+#     # Event loop
+#     wst = threading.Thread(target=web_socket_app.run_forever)
+#     wst.start()
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        web_socket_app.close()
+#     try:
+#         while True:
+#             time.sleep(1)
+#     except KeyboardInterrupt:
+#         web_socket_app.close()

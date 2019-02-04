@@ -109,7 +109,7 @@ def parse_args(args=None):
                         default=False,
                         action='store_true')
     parser.add_argument('-X', dest='dump',
-                        help='Dump to console',
+                        help='Dump Received Data to console',
                         default=False,
                         action='store_true')
     parser.add_argument('-e', dest='autoExit',
@@ -150,6 +150,11 @@ if __name__ == '__main__':
     market_price.dumpRcvd = opts.dump
     market_price.dumpPP = opts.showPingPong
     market_price.dumpSent = opts.showSentMsgs
+    market_price.autoExit = opts.autoExit
+
+    if (opts.autoExit):
+        opts.snapshot=True
+        print("AutoExit selected so enabling Snapshot mode too")
 
     market_price.setRequestAttr(simpleRics,opts.domain,opts.snapshot)
 
@@ -174,27 +179,32 @@ if __name__ == '__main__':
     wst.start()
 
     try:
+        stat_time = time.time() + opts.statsTimeSecs
         if (opts.exitTimeMins>0):   # Loop for x minutes
             end_time = time.time() + 60*opts.exitTimeMins
             print("Run for", opts.exitTimeMins, "minute(s)")
-            while time.time() < end_time:
-                time.sleep(opts.statsTimeSecs)
-                market_price.print_stats()
+            while (time.time() < end_time) and (not market_price.shutdown_app):
+                time.sleep(1)
+                if (time.time() >= stat_time):
+                    market_price.print_stats()
+                    stat_time = time.time() + opts.statsTimeSecs
         else:                   
             print("Run indefinitely - CTRL+C to break")
-            while True:         # Loop for ever     
-                time.sleep(opts.statsTimeSecs)
-                market_price.print_stats()
+            # Loop as long as websocket is open     
+            while not market_price.shutdown_app:         
+                time.sleep(1)
+                if (time.time() >= stat_time):
+                    market_price.print_stats()
+                    stat_time = time.time() + opts.statsTimeSecs
     except KeyboardInterrupt:
-       pass
+        pass
     finally:
         ws_app.close()
-        
-    market_price.print_stats()
+        market_price.print_stats()
 
 #    mydict = vars(opts)
 #    print('Invoked with the following options')
 #    for myarg in mydict:
 #        print (myarg, ':', mydict[myarg])
 #
-# python pwtestclient -S ELEKTRON_DD -h ads1 -p 5900 -items VOD.L,BT.L,BP.L
+# python pywstestclient.py -S ELEKTRON_DD -H ads1 -p 5900 -items VOD.L,BT.L,BP.L -u umer.nalla -e
