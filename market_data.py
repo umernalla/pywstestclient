@@ -23,6 +23,7 @@ hostname = 'localhost'
 port = '15000'   
 ping_timeout_interval = 30  # How often do we expect to recieve Ping from server
 ping_timeout_time = 0       # If not received a Ping by this time then timeout and exit
+start_time = 0              # Time when first Market Data request made
 
 # Other Global default variables
 user = 'user'       # Default username for ADS login
@@ -50,8 +51,12 @@ web_socket_open = False
 shutdown_app = False
 
 def print_stats():
-    global imgCnt, updCnt, statusCnt, pingCnt
-    print("Stats; Refresh:",imgCnt," Updates:",updCnt," Status:",statusCnt,"Pings:",pingCnt)
+    global imgCnt, updCnt, statusCnt, pingCnt, start_time
+    elapsed = 0
+    if (start_time!=0):
+        elapsed = time.time() - start_time
+    print("Stats; Refresh: {} \tUpdates: {} \tStatus: {} \tPings: {} \tElapsed Time: {:.2f}secs"
+        .format(imgCnt,updCnt,statusCnt,pingCnt, elapsed))
 
 def set_Login(u,a,p):
     global user, app_id, position
@@ -132,8 +137,9 @@ def process_message(ws, message_json):
 
 def process_login_response(ws, message_json):
     # Get Ping timeout interval from server
-    global ping_timeout_interval
+    global ping_timeout_interval, start_time
     ping_timeout_interval = int(message_json['Elements']['PingTimeout'])
+    start_time = time.time()
     """ Send item request """
     send_market_price_request(ws)
 

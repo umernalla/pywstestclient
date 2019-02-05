@@ -69,7 +69,8 @@ def validate_options():
     return True
 
 def parse_args(args=None):
-    parser = argparse.ArgumentParser(description='rmdstestclient python websocket version',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description='python websocket test client',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
                        
     parser.add_argument('-S', dest='service',
                         help='service name to request from',
@@ -126,7 +127,7 @@ def parse_args(args=None):
     parser.add_argument('-st', dest='statsTimeSecs',
                         help='Show Statistics interval in seconds',
                         type=int,
-                        default=10)
+                        default=5)
     parser.add_argument('-ss', dest='showSentMsgs',
                         help='Output the JSON messages sent to server',
                         default=False,
