@@ -109,9 +109,12 @@ def parse_args(args=None):
                         default=False,
                         action='store_true')
     parser.add_argument('-X', dest='dump',
-                        help='Dump Received Data to console',
+                        help='Output Received JSON Data messages to console',
                         default=False,
                         action='store_true')
+    parser.add_argument('-l', dest='logFilename',
+                        help='Redirect console to filename',
+                        default=None)
     parser.add_argument('-e', dest='autoExit',
                         help='Auto Exit after all items retrieved',
                         default=False,
@@ -132,6 +135,10 @@ def parse_args(args=None):
                         help='Output Ping and Pong heartbeat messages',
                         default=False,
                         action='store_true')
+    parser.add_argument('-sos', dest='showStatusMsgs',
+                        help='Output received Status messages',
+                        default=False,
+                        action='store_true')
     
     return (parser.parse_args(args))
 
@@ -142,6 +149,17 @@ if __name__ == '__main__':
         print('Exit due to invalid parameters')
         sys.exit(2)
 
+    #  Redirect console to file if logFilename specified
+    orig_stdout = sys.stdout
+    if (opts.logFilename!=None):
+        try:
+            print('Redirecting console to file "{}"'.format(opts.logFilename))
+            sys.stdout = open(opts.logFilename, "w")
+        except IOError:
+            print('Could not redirect console to file "{}"'.format(opts.logFilename))
+            sys.stdout = orig_stdout
+            sys.exit(2)
+
     #print('Valid parameters', simpleRics) 
     market_data.set_Login(opts.user,
                         opts.appID,
@@ -150,6 +168,7 @@ if __name__ == '__main__':
     market_data.dumpRcvd = opts.dump
     market_data.dumpPP = opts.showPingPong
     market_data.dumpSent = opts.showSentMsgs
+    market_data.dumpStatus = opts.showStatusMsgs
     market_data.autoExit = opts.autoExit
 
     if (opts.autoExit):
@@ -200,6 +219,8 @@ if __name__ == '__main__':
     finally:
         ws_app.close()
         market_data.print_stats()
+
+    sys.stdout = orig_stdout
 
 #
 # python pywstestclient.py -S ELEKTRON_DD -H ads1 -p 5900 -items VOD.L,BT.L,BP.L -u umer.nalla -e

@@ -35,6 +35,7 @@ snapshot = False    # Make Snapshot request (rather than the default streaming)
 dumpRcvd = False    # Dump messages received from server
 dumpPP = False      # Dump the incoming Ping and outgoing Pong messages
 dumpSent = False    # Dump out the Requests to the SENT to the server
+dumpStatus = False  # Dump out any Status Msgs received from server
 autoExit = False    # Exit once Refresh (or Status closed) received for all requests
 
 reqCnt = 0      # Number of Data Items requested
@@ -86,7 +87,7 @@ def check_ping_timedout():    # Has it been too long since last ping
         shutdown_app = True
 
 def process_message(ws, message_json):
-    global imgCnt, updCnt, statusCnt, pingCnt
+    global imgCnt, updCnt, statusCnt, pingCnt, closedCnt
 
     """ Parse at high level and output JSON of message """
     message_type = message_json['Type']
@@ -100,15 +101,21 @@ def process_message(ws, message_json):
             process_login_response(ws, message_json)
         else:
             imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
-            if ((imgCnt==reqCnt) and autoExit):
-                cleanup(ws)
     elif message_type == "Update":
         updCnt += 1
     elif message_type == "Status":
+        # Count Data Item Status msg received
         if message_domain != "Login":
             statusCnt += 1
+            stream_state = message_json['State']['Stream']
+            data_state = message_json['State']['Data']
+            # Was the item request rejected by server & stream Closed?
+            if stream_state=='Closed' and data_state=='Suspect':
+                closedCnt += 1
+            if dumpStatus:
+                print(json.dumps(message_json))
         else:
-            print("LOGIN STATUS:")      # We got a Login status so report it
+            print("LOGIN STATUS:")      # We got a Login status (a problem ?) so report it
             print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
     elif message_type == "Ping":
         pingCnt += 1
@@ -117,6 +124,10 @@ def process_message(ws, message_json):
         if (dumpPP):
             print("RCVD:", json.dumps(message_json),
                     " SENT:", json.dumps(pong_json))
+
+    # Cleanup and exit - if autoExit and we have received response to all requests
+    if (autoExit and (reqCnt==imgCnt+closedCnt)):
+        cleanup(ws)
 
 
 def process_login_response(ws, message_json):
