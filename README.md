@@ -20,15 +20,17 @@ Optional arguments:
   -f RICFILE         simple file of RICs (default: None)  
   -md DOMAIN         domain model (default: None)  
   -t                 Snapshot request (default: False)  
-  -X                 Dump to console (default: False)  
+  -X                 Output Received JSON Data messages to console (default: False)  
+  -l LOGFILENAME     Redirect console to filename (default: None)  
+  -e                 Auto Exit after all items retrieved (default: False)  
   -et EXITTIME       Exit after time in minutes (0=indefinite) (default: 0)  
   -st STATSTIMESECS  Show Statistics interval in seconds (default: 10)  
   -ss                Output the JSON messages sent to server (default: False)  
   -sp                Output Ping and Pong heartbeat messages (default: False)  
+  -sos               Output received Status messages (default: False)  
   
 NOT YET IMPLEMENTED  
   -pw PASSWORD       EDP user password (default: None)  
-  -e                 Auto Exit after all items retrieved (default: False)  
   -ef RICFILEEXT     multi domain file of RICs - e.g. 6|VOD.L (default: None)  
   
 
