@@ -27,8 +27,8 @@ edp_mode = False
 def readSimpleRicsFile():
     global simpleRics
     try:
-        with open(opts.ricFile, 'r') as f:
-            simpleRics = f.read().splitlines()  # using read.splitlines to avoid \n on end of each RIC
+        with open(opts.ricFile, 'r') as f:      # Read one RIC per line from file
+            simpleRics = [ric.strip(' \t\n\r') for ric in f]  # and strip any whitespace etc
     except FileNotFoundError as fnf_error:
         print(fnf_error)
         return
@@ -44,15 +44,16 @@ def readExtRicsFile():
         extRics=[]
         for xRic in tmpExtRics:
             tmp = xRic.split("|")
-            try:
-                extRics.append((int(tmp[0]), str(tmp[1])))
+            try:                    # Add entry as Domain number, RIC
+                extRics.append((int(tmp[0]), str(tmp[1]).strip(' \t\n\r')))  # strip any whitespaces
             except:pass
-
+        extRics.sort()
+        print("SORTED:", extRics)
     except FileNotFoundError as fnf_error:
         print(fnf_error)
         return
 
-    print("Multi Domain RICs from file:", extRics)
+    print("{} Multi Domain RICs from file: {}".format(len(extRics), extRics))
 
 # Only one RIC list specifier allowed; -items OR -f OR -ef
 def parse_rics():
@@ -102,6 +103,10 @@ def validate_options():
 
     if (opts.exitTimeMins>0) and (opts.statsTimeSecs > (opts.exitTimeMins*60)):
         opts.statsTimeSecs ==  opts.exitTimeMins*60
+
+    # Check if Domain has been specified as a numeric value rather than name
+    if opts.domain and opts.domain.isdigit():        
+        opts.domain = int(opts.domain)
 
     return True
 
@@ -272,7 +277,7 @@ if __name__ == '__main__':
         opts.snapshot=True
         print("AutoExit selected so enabling Snapshot mode too")
 
-    market_data.set_Request_Attr(simpleRics,opts.domain,opts.snapshot)
+    market_data.set_Request_Attr(simpleRics,opts.domain,opts.snapshot,extRics)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')

@@ -29,7 +29,8 @@ start_time = 0              # Time when first Market Data request made
 user = 'user'       # Default username for ADS login
 app_id = '256'      # Default application ID for login
 position = socket.gethostbyname(socket.gethostname())
-ricList = []    # List of RICs to request
+simpleRicList = []    # List of RICs to request
+domainRicList =[]   # List of RICs with Domain specified
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
 domainModel = None  # Websocket interface defaults to MarketPrice if not specified
 snapshot = False    # Make Snapshot request (rather than the default streaming)
@@ -69,11 +70,12 @@ def set_Login(u,a,p,t,e):
     auth_token=t
     edp_mode=e
 
-def set_Request_Attr(rList,rdm,snap):
-    global ricList,domainModel,snapshot
-    ricList=rList
+def set_Request_Attr(rList,rdm,snap, dmList):
+    global simpleRicList,domainModel,snapshot, domainRicList
+    simpleRicList=rList
     domainModel=rdm
     snapshot=snap
+    domainRicList=dmList
 
 def set_viewList(vList):
     global viewList
@@ -100,7 +102,7 @@ def process_message(ws, message_json):
 
     """ Parse at high level and output JSON of message """
     message_type = message_json['Type']
-    
+
     message_domain = "MarketPrice"  # Dont get Domain in MarketPrice message
     if 'Domain' in message_json:
         message_domain = message_json['Domain']
@@ -108,8 +110,10 @@ def process_message(ws, message_json):
     if message_type == "Refresh":
         if message_domain == "Login":
             process_login_response(ws, message_json)
-        else:
-            imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
+        else:   
+            if not (('Complete' in message_json) and    # Default value for Complete is True
+                (message_json['Complete']==False)) :    # Only count Refresh If 'Complete' not present or present as True
+                imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
     elif message_type == "Update":
         updCnt += 1
     elif message_type == "Status":
@@ -139,6 +143,11 @@ def process_message(ws, message_json):
             print("RCVD:", json.dumps(message_json),
                     " SENT:", json.dumps(pong_json))
 
+    elif message_type == 'Error':
+        print("ERR: ")
+        print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
+        cleanup(ws)
+
     # Cleanup and exit - if autoExit and we have received response to all requests
     if (autoExit and (reqCnt==imgCnt+closedCnt)):
         cleanup(ws)
@@ -151,27 +160,48 @@ def process_login_response(ws, message_json):
     logged_in = True
 
     ping_timeout_interval = int(message_json['Elements']['PingTimeout'])
+
+    next_stream_id = int(message_json['ID']) + 1
+
     start_time = time.time()
     """ Send item request """
-    send_market_price_request(ws)
+    if (domainRicList):
+        send_multi_domain_data_request(ws, next_stream_id)
+    else:
+        send_single_domain_data_request(ws, domainModel, simpleRicList, next_stream_id)
+
+def send_multi_domain_data_request(ws, streamID):
+    """ Group Market Data request by Domain type """
+
+    grouped = {}
+    for d, ric in domainRicList:
+        grouped.setdefault(d, []).append(ric)
+    print(grouped)
+    
+    for i, (domain, rics) in enumerate(grouped.items()):
+        print("CALLING:", domain, rics, i + streamID)
+        send_single_domain_data_request(ws, domain, rics, i + streamID)
+        streamID += len(rics)
 
 
-def send_market_price_request(ws):
+def send_single_domain_data_request(ws, domain, ricList, streamID):
     global reqCnt
-    """ Create and send simple Market Price request """
-
-    reqCnt = len(ricList)
+    """ Create and send Market Data request for a single Domain type"""
+    reqCnt += len(ricList)
 
     mp_req_json = {
-        'ID': 2,
+        'ID': streamID,
         'Key': {
             'Name': ricList,
         },
     }
+
+    #mp_req_json['ID'] = streamID
+
     if (len(viewList)>0):
         mp_req_json['View'] = viewList
-    if (domainModel!=None):
-        mp_req_json['Domain'] = domainModel
+    if (domain!=None):
+        mp_req_json['Domain'] = domain
     if snapshot:
         mp_req_json['Streaming'] = False
 
@@ -179,6 +209,7 @@ def send_market_price_request(ws):
     if (dumpSent):
         print("SENT MP Request:")
         print(json.dumps(mp_req_json, sort_keys=True, indent=2, separators=(',', ':')))
+
 
 def reissue_token(ws, token):
     global auth_token

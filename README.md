@@ -10,7 +10,7 @@ Mandatory arguments:
 Optional arguments:  
   -h, --help         show this help message and exit  
   -H HOST            hostname of ADS server or EDP endpoint (default: ads1)  
-  -ah AUTHHOSTNAME   authorization server hostname (default: api.edp.thomsonreuters.com)  
+  -ah AUTHHOSTNAME   authorization server (default: api.edp.thomsonreuters.com)  
   -p PORT            port of the ADS server or EDP (default: 15000)  
   -ap AUTHPORT       port of the authorisation server (default: 443)  
   -u USER            login user name (default: your local os username)  
@@ -34,6 +34,5 @@ Optional arguments:
   
 NOT YET IMPLEMENTED  
   -ef RICFILEEXT     multi domain file of RICs - e.g. 6|VOD.L (default: None)  
-  
   
   
