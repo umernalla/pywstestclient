@@ -20,7 +20,8 @@ Optional arguments:
   -items ITEMLIST    comma-separated list of RICs (default: None)  
   -vfids VIEWFIDS    comma-separated list of Field IDs for View (default: None)  
   -vnames VIEWNAMES  comma-separated list of Field Names for View (default: None)  
-  -f RICFILE         simple file of RICs (default: None)  
+  -f RICFILE         filename of simple RICs - one per line (default: None)  
+  -ef RICFILEEXT     filename of multi domain RICs - e.g. 6|VOD.L (default: None)  
   -md DOMAIN         domain model (default: None)  
   -t                 Snapshot request (default: False)  
   -X                 Output Received JSON Data messages to console (default: False)  
@@ -31,8 +32,7 @@ Optional arguments:
   -ss                Output the JSON messages sent to server (default: False)  
   -sp                Output Ping and Pong heartbeat messages (default: False)  
   -sos               Output received Status messages (default: False)  
-  
-NOT YET IMPLEMENTED  
-  -ef RICFILEEXT     multi domain file of RICs - e.g. 6|VOD.L (default: None)  
+
+
   
   
