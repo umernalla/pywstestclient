@@ -45,10 +45,13 @@ updCnt = 0      # Update messages received
 statusCnt = 0   # Status messages received
 pingCnt = 0     # Ping messages (= Pongs sent)
 closedCnt = 0   # Specifically Closed status message (e.g. item not found)
+logged_in = False # Did we get a successful Login response yet
 
+auth_token = None
 web_socket_app = None
 web_socket_open = False
 shutdown_app = False
+edp_mode = False
 
 def print_stats():
     global imgCnt, updCnt, statusCnt, pingCnt, start_time
@@ -58,11 +61,13 @@ def print_stats():
     print("Stats; Refresh: {} \tUpdates: {} \tStatus: {} \tPings: {} \tElapsed Time: {:.2f}secs"
         .format(imgCnt,updCnt,statusCnt,pingCnt, elapsed))
 
-def set_Login(u,a,p):
-    global user, app_id, position
+def set_Login(u,a,p,t,e):
+    global user, app_id, position, auth_token, edp_mode
     app_id=a
     user=u
     position=p
+    auth_token=t
+    edp_mode=e
 
 def set_Request_Attr(rList,rdm,snap):
     global ricList,domainModel,snapshot
@@ -85,14 +90,13 @@ def reset_ping_time():          # We can call this each time we send or receive 
     global ping_timeout_time    # to reset the timeout for the next ping
     ping_timeout_time = time.time() + ping_timeout_interval
 
-def check_ping_timedout():    # Has it been too long since last ping
-    global shutdown_app
+def ping_timedout():    # Has it been too long since last ping
     if (ping_timeout_time > 0) and (time.time() > ping_timeout_time):
         print("No ping from server, timing out")
-        shutdown_app = True
+        return True
 
 def process_message(ws, message_json):
-    global imgCnt, updCnt, statusCnt, pingCnt, closedCnt
+    global imgCnt, updCnt, statusCnt, pingCnt, closedCnt,shutdown_app
 
     """ Parse at high level and output JSON of message """
     message_type = message_json['Type']
@@ -117,11 +121,16 @@ def process_message(ws, message_json):
             # Was the item request rejected by server & stream Closed?
             if stream_state=='Closed' and data_state=='Suspect':
                 closedCnt += 1
-            if dumpStatus:
+            if dumpStatus and not dumpRcvd:     # if dumpRCVD set then Status will be dumped anyway
                 print(json.dumps(message_json))
         else:
-            print("LOGIN STATUS:")      # We got a Login status (a problem ?) so report it
+            print("LOGIN STATUS:")      # Login status usually a problem - so report it
             print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
+            if message_json['State']['Stream'] != "Open" or message_json['State']['Data'] != "Ok":
+                print("Login Request rejected / failed.")
+                shutdown_app=True
+        return
+
     elif message_type == "Ping":
         pingCnt += 1
         pong_json = { 'Type':'Pong' }
@@ -137,7 +146,10 @@ def process_message(ws, message_json):
 
 def process_login_response(ws, message_json):
     # Get Ping timeout interval from server
-    global ping_timeout_interval, start_time
+    global ping_timeout_interval, start_time, logged_in
+
+    logged_in = True
+
     ping_timeout_interval = int(message_json['Elements']['PingTimeout'])
     start_time = time.time()
     """ Send item request """
@@ -168,23 +180,36 @@ def send_market_price_request(ws):
         print("SENT MP Request:")
         print(json.dumps(mp_req_json, sort_keys=True, indent=2, separators=(',', ':')))
 
+def reissue_token(ws, token):
+    global auth_token
+    auth_token = token
+    send_login_request(ws, True)
 
-def send_login_request(ws):
+def send_login_request(ws, is_refresh_token=False):
     """ Generate a login request from command line data (or defaults) and send """
     login_json = {
         'ID': 1,
         'Domain': 'Login',
         'Key': {
-            'Name': '',
             'Elements': {
                 'ApplicationId': '',
                 'Position': ''
             }
         }
     }
-    login_json['Key']['Name'] = user
+
     login_json['Key']['Elements']['ApplicationId'] = app_id
     login_json['Key']['Elements']['Position'] = position
+
+    if (edp_mode):  # Connected to EDP
+        login_json['Key']['NameType'] = 'AuthnToken'
+        login_json['Key']['Elements']['AuthenticationToken'] = auth_token
+        # If the token is a refresh token, this is not our first login attempt.
+        if is_refresh_token:
+            login_json['Refresh'] = False
+    else:   # TREP ADS connection
+        login_json['Key']['Name'] = user
+    
     ws.send(json.dumps(login_json))
     if (dumpSent):
         print("SENT Login Request:")

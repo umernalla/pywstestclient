@@ -3,8 +3,10 @@ import argparse
 import sys
 import socket
 import getpass
+import requests
 import market_data
 import websocket
+import json
 import threading
 from threading import Thread, Event
 
@@ -13,36 +15,67 @@ simpleRics=None
 extRics=None
 opts=None
 ws_app=None
+auth_path = 'auth/oauth2/beta1/token'
+sts_token = ''
+refresh_token = ''
+client_secret = ''
+expire_time = 0
+scope = 'trapi'
+edp_mode = False
 
+# Read RICs from file '-f' option i.e. no domain specifies so will be uses in conjunction with domain model parameter
 def readSimpleRicsFile():
     global simpleRics
-    with open(opts.ricFile, 'r') as f:
-        simpleRics = f.read().splitlines()  # using read.splitlines to avoid \n on end of each RIC
-    print(simpleRics)
+    try:
+        with open(opts.ricFile, 'r') as f:
+            simpleRics = f.read().splitlines()  # using read.splitlines to avoid \n on end of each RIC
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
+        return
 
+    print("RICs from file:", simpleRics)
+
+# Read domain specified + RIC from multi domain file '-ef' option
 def readExtRicsFile():
-    with open(opts.ricFileExt, 'r') as f:
-        tmpExtRics = f.read().splitlines() # using read.splitlines to strip \n on end of each RIC
-    extRics=[]
-    for xRic in tmpExtRics:
-        tmp = xRic.split("|")
-        try:
-            extRics.append((int(tmp[0]), str(tmp[1])))
-        except:pass
-    print(extRics)
+    global extRics
+    try:
+        with open(opts.ricFileExt, 'r') as f:
+            tmpExtRics = f.read().splitlines() # using read.splitlines to strip \n on end of each RIC
+        extRics=[]
+        for xRic in tmpExtRics:
+            tmp = xRic.split("|")
+            try:
+                extRics.append((int(tmp[0]), str(tmp[1])))
+            except:pass
 
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
+        return
+
+    print("Multi Domain RICs from file:", extRics)
+
+# Only one RIC list specifier allowed; -items OR -f OR -ef
 def parse_rics():
     global simpleRics
-    if (opts.itemList!=None):
+    if (opts.itemList):
         simpleRics = opts.itemList.split(',')
         print(simpleRics)
-    elif (opts.ricFile!=None):
+    elif (opts.ricFile):
         readSimpleRicsFile()
-    elif (opts.ricFileExt!=None):
+    elif (opts.ricFileExt):
         readExtRicsFile()
 
 def validate_options():
-    global opts
+    global opts, edp_mode
+
+    # If password is specified then we are going to attempt EDP connection
+    if opts.password:
+        # Must have authorisation server specified for EDP connection
+        if (not opts.authHostname) or (not opts.authPort):
+            print("For EDP connection, Authorisation Host + Port are required")
+            return False
+        edp_mode = True
+
     # Dont allow both FIDS and Field Names to be specifed for View request
     if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  
         print('Only one type of View allowed; -vfids or -vnames')
@@ -62,6 +95,10 @@ def validate_options():
         return False
     else:
         parse_rics()
+        # Check if we parsed some RICs to request. 
+        if (not simpleRics) and (not extRics):
+            print("Was not able to read any RICs from file or command line")
+            return False
 
     if (opts.exitTimeMins>0) and (opts.statsTimeSecs > (opts.exitTimeMins*60)):
         opts.statsTimeSecs ==  opts.exitTimeMins*60
@@ -76,12 +113,19 @@ def parse_args(args=None):
                         help='service name to request from',
                         required='True')
     parser.add_argument('-H', dest='host',
-                        help='hostname / ip of server',
+                        help='data server hostname / endpoint',
                         default='ads1')
+    parser.add_argument('-ah', dest='authHostname',
+                        help='authorization server hostname',
+                        default='api.edp.thomsonreuters.com')
     parser.add_argument('-p', dest='port',
                         help='port of the server',
                         type=int,
                         default=15000)
+    parser.add_argument('-ap', dest='authPort',
+                        help='port of the authorisation server',
+                        type=int,
+                        default=443)
     parser.add_argument('-u', dest='user',
                         help='login user name',
                         default=getpass.getuser())
@@ -143,6 +187,50 @@ def parse_args(args=None):
     
     return (parser.parse_args(args))
 
+def get_sts_token(current_refresh_token):
+    """ 
+        Retrieves an authentication token. 
+        :param current_refresh_token: Refresh token retrieved from a previous authentication, used to retrieve a
+        subsequent access token. If not provided (i.e. on the initial authentication), the password is used.
+    """
+    
+    url = 'https://{}:{}/{}'.format(opts.authHostname, opts.authPort, auth_path)
+
+    if not current_refresh_token:  # First time through, send password
+        data = {'username': opts.user, 'password': opts.password, 'grant_type': 'password', 'takeExclusiveSignOnControl': True,
+                'scope': scope}
+        print("Sending authentication request with password to ", url, "...")
+    else:  # Use the given refresh token
+        data = {'username': opts.user, 'refresh_token': current_refresh_token, 'grant_type': 'refresh_token',
+                'takeExclusiveSignOnControl': True}
+        print("Sending authentication request with refresh token to ", url, "...")
+
+    try:
+        r = requests.post(url,
+                          headers={'Accept': 'application/json'},
+                          data=data,
+                          auth=(opts.user, client_secret),
+                          verify=True)
+
+    except requests.exceptions.RequestException as e:
+        print('EDP-GW authentication exception failure:', e)
+        return None, None, None
+
+    if r.status_code != 200:
+        print('EDP-GW authentication result failure:', r.status_code, r.reason)
+        print('Text:', r.text)
+        if r.status_code == 401 and current_refresh_token:
+            # Refresh token may have expired. Try using our password.
+            return get_sts_token(None)
+        return None, None, None
+
+    auth_json = r.json()
+    print("EDP-GW Authentication succeeded. RECEIVED:")
+    print(json.dumps(auth_json, sort_keys=True, indent=2, separators=(',', ':')))
+
+    return auth_json['access_token'], auth_json['refresh_token'], auth_json['expires_in']
+
+
 if __name__ == '__main__':
     opts = parse_args(sys.argv[1:])
     print(opts)
@@ -161,10 +249,18 @@ if __name__ == '__main__':
             sys.stdout = orig_stdout
             sys.exit(2)
 
-    #print('Valid parameters', simpleRics) 
+    if edp_mode:    # Are we going to connect to EDP
+        sts_token, refresh_token, expire_time = get_sts_token(None)
+        if not sts_token:
+            print("Could not get authorisaton token")
+            sys.exit(1)
+
+    # Set our EDP or ADS Login request credentials
     market_data.set_Login(opts.user,
                         opts.appID,
-                        opts.position)
+                        opts.position,
+                        sts_token,
+                        edp_mode)
 
     market_data.dumpRcvd = opts.dump
     market_data.dumpPP = opts.showPingPong
@@ -186,7 +282,9 @@ if __name__ == '__main__':
         market_data.set_viewList(vList)
 
     # Start websocket handshake
-    ws_address = "ws://{}:{}/WebSocket".format(opts.host, opts.port)
+    # Use 'wss' for edp connection or 'ws' for ADS connection
+    protocol = "wss" if edp_mode else "ws"
+    ws_address = protocol +"://{}:{}/WebSocket".format(opts.host, opts.port)
     print("Connecting to WebSocket " + ws_address + " ...")
     ws_app = websocket.WebSocketApp(ws_address, header=['User-Agent: Python'],
                                         on_message=market_data.on_message,
@@ -195,11 +293,12 @@ if __name__ == '__main__':
                                         subprotocols=['tr_json2'])
     ws_app.on_open = market_data.on_open
     # Event loop
-    wst = threading.Thread(target=ws_app.run_forever)
+    wst = threading.Thread(target=ws_app.run_forever, kwargs={'sslopt': {'check_hostname': False}})
     wst.start()
 
     try:
         stat_time = time.time() + opts.statsTimeSecs
+        reissue_token_time = time.time() + (int(expire_time) - 30)
         end_time = None
         if (opts.exitTimeMins>0):   # Loop for x minutes
             end_time = time.time() + 60*opts.exitTimeMins
@@ -209,11 +308,26 @@ if __name__ == '__main__':
 
         while (((opts.exitTimeMins==0) or (time.time() < end_time)) 
                     and (not market_data.shutdown_app)):
+            
             time.sleep(1)
-            market_data.check_ping_timedout()
+
+            if ((edp_mode) and time.time()>=reissue_token_time):
+                sts_token, refresh_token, expire_time = get_sts_token(refresh_token)
+                if not sts_token:
+                    print("Could not get authorisaton token")
+                    break
+                if market_data.logged_in:
+                    market_data.reissue_token(ws_app,sts_token)
+                # Reset the token reissue time
+                reissue_token_time = time.time() + (int(expire_time) - 30)
+
             if (time.time() >= stat_time):
                 market_data.print_stats()
                 stat_time = time.time() + opts.statsTimeSecs
+            
+            # Check to see if we have not received a PING from server in a while
+            if market_data.ping_timedout():
+                break   # Exit loop and app
 
     except KeyboardInterrupt:
         pass
