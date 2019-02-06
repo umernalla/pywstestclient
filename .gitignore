@@ -6,3 +6,4 @@ edprun.bat
 adsrun.bat
 runads.bat
 
+__pycache__/market_data.cpython-37.pyc

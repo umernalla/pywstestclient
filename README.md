@@ -2,16 +2,19 @@
 Python Websocket API Test Client
 
 Python example that uses the Refinitiv Websocket interface to facilitate the consumption of realtime data.
-This example is meant to be a simplistic version of the commandline rmdstestclient test tool
+This example is meant to be a simplistic version of the 'rmdstestclient' tool
 
 Mandatory arguments:  
-  -S SERVICE         service name to request from (default: None)
+  -S SERVICE         service name to request from (default: None)  
   
 Optional arguments:  
   -h, --help         show this help message and exit  
-  -H HOST            hostname / ip of server (default: ads1)  
-  -p PORT            port of the server (default: 15000)  
+  -H HOST            hostname of ADS server or EDP endpoint (default: ads1)  
+  -ah AUTHHOSTNAME   authorization server hostname (default: api.edp.thomsonreuters.com)  
+  -p PORT            port of the ADS server or EDP (default: 15000)  
+  -ap AUTHPORT       port of the authorisation server (default: 443)  
   -u USER            login user name (default: your local os username)  
+  -pw PASSWORD       Specify EDP user password to connect to EDP (default: None)  
   -pos POSITION      application position (default: your local IP address)  
   -aid APPID         application Identifier (default: 256)  
   -items ITEMLIST    comma-separated list of RICs (default: None)  
@@ -30,7 +33,6 @@ Optional arguments:
   -sos               Output received Status messages (default: False)  
   
 NOT YET IMPLEMENTED  
-  -pw PASSWORD       EDP user password (default: None)  
   -ef RICFILEEXT     multi domain file of RICs - e.g. 6|VOD.L (default: None)  
   
 
