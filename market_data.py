@@ -19,8 +19,8 @@ import threading
 from threading import Thread, Event
 
 # Global Default Variables for connection
-hostname = 'localhost'  
-port = '15000'   
+hostname = 'localhost'      # Data server 
+port = '15000'              # Data server port
 ping_timeout_interval = 30  # How often do we expect to recieve Ping from server
 ping_timeout_time = 0       # If not received a Ping by this time then timeout and exit
 start_time = 0              # Time when first Market Data request made
@@ -48,12 +48,13 @@ pingCnt = 0     # Ping messages (= Pongs sent)
 closedCnt = 0   # Specifically Closed status message (e.g. item not found)
 logged_in = False # Did we get a successful Login response yet
 
-auth_token = None
-web_socket_app = None
+auth_token = None       # Autorization token for EDP connections
+web_socket_app = None   
 web_socket_open = False
-shutdown_app = False
-edp_mode = False
+shutdown_app = False    # flag to indicate shutdown
+edp_mode = False        # Are connecting to EDP
 
+# Dump some basic stats to console
 def print_stats():
     global imgCnt, updCnt, statusCnt, pingCnt, start_time
     elapsed = 0
@@ -62,6 +63,7 @@ def print_stats():
     print("Stats; Refresh: {} \tUpdates: {} \tStatus: {} \tPings: {} \tElapsed Time: {:.2f}secs"
         .format(imgCnt,updCnt,statusCnt,pingCnt, elapsed))
 
+# Various Login related parameters
 def set_Login(u,a,p,t,e):
     global user, app_id, position, auth_token, edp_mode
     app_id=a
@@ -70,6 +72,7 @@ def set_Login(u,a,p,t,e):
     auth_token=t
     edp_mode=e
 
+# Data request related parameters
 def set_Request_Attr(rList,rdm,snap, dmList):
     global simpleRicList,domainModel,snapshot, domainRicList
     simpleRicList=rList
@@ -77,43 +80,50 @@ def set_Request_Attr(rList,rdm,snap, dmList):
     snapshot=snap
     domainRicList=dmList
 
+# View used to request Field filtering by the server
 def set_viewList(vList):
     global viewList
     viewList=vList
-    print("Set viewList to", viewList, "from", vList)
+    #print("Set viewList to", viewList, "from", vList)
 
+# Attempt clean shutdown
 def cleanup(ws):
     global shutdown_app
     send_login_close(ws)
     shutdown_app=True   # signal to main loop to exit
     #ws.close()     # Cannot use due to Websocket client issue/bug
 
-def reset_ping_time():          # We can call this each time we send or receive a message 
-    global ping_timeout_time    # to reset the timeout for the next ping
+# Call this each time we send or receive a message 
+# to reset the timeout for the next ping
+def reset_ping_time():          
+    global ping_timeout_time    
     ping_timeout_time = time.time() + ping_timeout_interval
 
-def ping_timedout():    # Has it been too long since last ping
+# Has it been too long since last ping
+def ping_timedout():    
     if (ping_timeout_time > 0) and (time.time() > ping_timeout_time):
         print("No ping from server, timing out")
         return True
 
+# Process the JSON message received from server
 def process_message(ws, message_json):
     global imgCnt, updCnt, statusCnt, pingCnt, closedCnt,shutdown_app
 
-    """ Parse at high level and output JSON of message """
+    # Get Message Type
     message_type = message_json['Type']
 
     message_domain = "MarketPrice"  # Dont get Domain in MarketPrice message
     if 'Domain' in message_json:
         message_domain = message_json['Domain']
 
+    # Process different Message Types
     if message_type == "Refresh":
         if message_domain == "Login":
             process_login_response(ws, message_json)
         else:   
             if not (('Complete' in message_json) and    # Default value for Complete is True
                 (message_json['Complete']==False)) :    # Only count Refresh If 'Complete' not present or present as True
-                imgCnt += 1     # Refresh for a non-Login i.e. Data Domain
+                imgCnt += 1     # Only for Data related Refresh i.e. not Login
     elif message_type == "Update":
         updCnt += 1
     elif message_type == "Status":
@@ -125,25 +135,25 @@ def process_message(ws, message_json):
             # Was the item request rejected by server & stream Closed?
             if stream_state=='Closed' and data_state=='Suspect':
                 closedCnt += 1
-            if dumpStatus and not dumpRcvd:     # if dumpRCVD set then Status will be dumped anyway
+            if dumpStatus and not dumpRcvd:     # if dumpRCVD set then Status will be dumped elsewhere
                 print(json.dumps(message_json))
         else:
-            print("LOGIN STATUS:")      # Login status usually a problem - so report it
+            print("LOGIN STATUS:")      # Login status usually a problem - so report it and return
             print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
             if message_json['State']['Stream'] != "Open" or message_json['State']['Data'] != "Ok":
                 print("Login Request rejected / failed.")
                 shutdown_app=True
         return
-
-    elif message_type == "Ping":
-        pingCnt += 1
+    
+    elif message_type == "Ping":    # If we get a Ping from the Server
+        pingCnt += 1                # we need to respond with a Pong 
         pong_json = { 'Type':'Pong' }
         ws.send(json.dumps(pong_json))
         if (dumpPP):
             print("RCVD:", json.dumps(message_json),
                     " SENT:", json.dumps(pong_json))
 
-    elif message_type == 'Error':
+    elif message_type == 'Error':   # Oh Dear - server did not like our Request
         print("ERR: ")
         print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
         cleanup(ws)
@@ -152,17 +162,21 @@ def process_message(ws, message_json):
     if (autoExit and (reqCnt==imgCnt+closedCnt)):
         cleanup(ws)
 
-
+# We received a Login Refresh Response from Server - success!
 def process_login_response(ws, message_json):
-    # Get Ping timeout interval from server
+    
     global ping_timeout_interval, start_time, logged_in
 
     logged_in = True
 
+    # Get Ping timeout interval supplied by server
     ping_timeout_interval = int(message_json['Elements']['PingTimeout'])
 
+    # Get the Login StreamID and increment - ready for Data request
     next_stream_id = int(message_json['ID']) + 1
 
+    # For statistics - we start timing after Login 
+    # and just before we send our data requests
     start_time = time.time()
     """ Send item request """
     if (domainRicList):
@@ -170,20 +184,28 @@ def process_login_response(ws, message_json):
     else:
         send_single_domain_data_request(ws, domainModel, simpleRicList, next_stream_id)
 
+# User specified '-ef' and file with multiple domain types
+# So we need to group RICs by Domain and make a batch request for each group
 def send_multi_domain_data_request(ws, streamID):
-    """ Group Market Data request by Domain type """
 
+    """ Group Market Data request by Domain type """
+    """ and then make batch request for each group """
     grouped = {}
+    # Create lists grouped by Domain Type
     for d, ric in domainRicList:
         grouped.setdefault(d, []).append(ric)
-    print(grouped)
+    #print(grouped)
     
+    # For each Domain type group, call the data request method
     for i, (domain, rics) in enumerate(grouped.items()):
-        print("CALLING:", domain, rics, i + streamID)
         send_single_domain_data_request(ws, domain, rics, i + streamID)
-        streamID += len(rics)
+        # Server allocates unique StreamID to each item in a Batch
+        # so we need to increment StreamID appropriately for next request
+        streamID += len(rics)   
 
 
+# Make a Batch request for all the RICs in ricList
+# specify any required Views and Domains etc. 
 def send_single_domain_data_request(ws, domain, ricList, streamID):
     global reqCnt
     """ Create and send Market Data request for a single Domain type"""

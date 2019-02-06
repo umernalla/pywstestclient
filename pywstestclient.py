@@ -23,7 +23,8 @@ expire_time = 0
 scope = 'trapi'
 edp_mode = False
 
-# Read RICs from file '-f' option i.e. no domain specifies so will be uses in conjunction with domain model parameter
+# Read RICs from file '-f' option i.e. no domain specified 
+# so will be used in conjunction with Domain Model parameter
 def readSimpleRicsFile():
     global simpleRics
     try:
@@ -35,7 +36,10 @@ def readSimpleRicsFile():
 
     print("RICs from file:", simpleRics)
 
-# Read domain specified + RIC from multi domain file '-ef' option
+# Read Domain + RIC from multi domain file '-ef' option
+# File contains Domain Model Number and RIC seperated by | - one per line e..g
+# 6|VOD.L
+# 7|BT.L
 def readExtRicsFile():
     global extRics
     try:
@@ -53,7 +57,7 @@ def readExtRicsFile():
         print(fnf_error)
         return
 
-    print("{} Multi Domain RICs from file: {}".format(len(extRics), extRics))
+    #print("Read {} Multi Domain RICs from file: {}".format(len(extRics), extRics))
 
 # Only one RIC list specifier allowed; -items OR -f OR -ef
 def parse_rics():
@@ -78,10 +82,11 @@ def validate_options():
         edp_mode = True
 
     # Dont allow both FIDS and Field Names to be specifed for View request
-    if ((opts.viewFIDs!=None) and (opts.viewNames!=None)):  
+    if ((opts.viewFIDs) and (opts.viewNames)):  
         print('Only one type of View allowed; -vfids or -vnames')
         return False
 
+    # Ensure only one RIC list /filename specified by user
     ricLists = (opts.itemList, opts.ricFile, opts.ricFileExt)
     ricListCnt=0
     for rics in ricLists:
@@ -91,7 +96,7 @@ def validate_options():
     if (ricListCnt>1):
         print('Only one RIC list specifier allowed; -items, -f or -ef')
         return False
-    elif (ricListCnt==0):
+    elif (not ricListCnt):
         print('Must specify some RICs using one of the following; -items, -f or -ef')
         return False
     else:
@@ -101,6 +106,7 @@ def validate_options():
             print("Was not able to read any RICs from file or command line")
             return False
 
+    # If stats interval is >  specified runtime then reduce interval
     if (opts.exitTimeMins>0) and (opts.statsTimeSecs > (opts.exitTimeMins*60)):
         opts.statsTimeSecs ==  opts.exitTimeMins*60
 
@@ -110,6 +116,7 @@ def validate_options():
 
     return True
 
+# Parge command line arguments
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description='python websocket test client',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -192,6 +199,7 @@ def parse_args(args=None):
     
     return (parser.parse_args(args))
 
+# Get auth tokens from auth server
 def get_sts_token(current_refresh_token):
     """ 
         Retrieves an authentication token. 
@@ -238,9 +246,9 @@ def get_sts_token(current_refresh_token):
 
 if __name__ == '__main__':
     opts = parse_args(sys.argv[1:])
-    print(opts)
+    # print("Invoked with:", opts)
     if not validate_options():
-        print('Exit due to invalid parameters')
+        print('Exit due to invalid arguments')
         sys.exit(2)
 
     #  Redirect console to file if logFilename specified
@@ -273,6 +281,8 @@ if __name__ == '__main__':
     market_data.dumpStatus = opts.showStatusMsgs
     market_data.autoExit = opts.autoExit
 
+    # User wants to exit once all item responsed from server 
+    # So switch to Snapshot mode.
     if (opts.autoExit):
         opts.snapshot=True
         print("AutoExit selected so enabling Snapshot mode too")
@@ -301,21 +311,28 @@ if __name__ == '__main__':
     wst = threading.Thread(target=ws_app.run_forever, kwargs={'sslopt': {'check_hostname': False}})
     wst.start()
 
+    # Now lets run a loop to allow time to send and receive async responses from server
     try:
+        # Determine how often to output basic stats
         stat_time = time.time() + opts.statsTimeSecs
+        # When do we next need to reissue the auth token
         reissue_token_time = time.time() + (int(expire_time) - 30)
+        
+        # When should we stop looping and exit
         end_time = None
-        if (opts.exitTimeMins>0):   # Loop for x minutes
+        if (opts.exitTimeMins>0):   # Are we looping for limited time
             end_time = time.time() + 60*opts.exitTimeMins
             print("Run for", opts.exitTimeMins, "minute(s)")
         else:
             print("Run indefinitely - CTRL+C to break")
 
+        # Loop forever or until specified end time or shutdown signalled
         while (((opts.exitTimeMins==0) or (time.time() < end_time)) 
                     and (not market_data.shutdown_app)):
             
             time.sleep(1)
 
+            # If we are connected to EDP, check if its time to re-authorise
             if ((edp_mode) and time.time()>=reissue_token_time):
                 sts_token, refresh_token, expire_time = get_sts_token(refresh_token)
                 if not sts_token:
@@ -326,6 +343,7 @@ if __name__ == '__main__':
                 # Reset the token reissue time
                 reissue_token_time = time.time() + (int(expire_time) - 30)
 
+            # Is is time to print some basic stats?
             if (time.time() >= stat_time):
                 market_data.print_stats()
                 stat_time = time.time() + opts.statsTimeSecs
@@ -341,6 +359,5 @@ if __name__ == '__main__':
         market_data.print_stats()
 
     sys.stdout = orig_stdout
-
 #
-# python pywstestclient.py -S ELEKTRON_DD -H ads1 -p 5900 -items VOD.L,BT.L,BP.L -u umer.nalla -e
+#
