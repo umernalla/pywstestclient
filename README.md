@@ -7,6 +7,19 @@ This example is meant to be a simplistic version of the 'rmdstestclient' tool an
 * Streaming / Snapshot
 * Reuters Domain Models
 
+## Setup 
+### Windows/Linux/macOS
+1. __Install Python__
+    - Go to: <https://www.python.org/downloads/>
+    - Select the __Download tile__ for the Python 3 version
+    - Run the downloaded `python-<version>` file and follow installation instructions
+2. __Install libraries__
+    - Run (in order):
+      - `pip install requests`
+      - `pip install websocket-client`
+	  **The websocket-client must be version 0.49 or greater**
+
+
 
 #### Optional arguments:  
   -h, --help         show this help message and exit  
@@ -35,7 +48,7 @@ This example is meant to be a simplistic version of the 'rmdstestclient' tool an
   -sp                Output Ping and Pong heartbeat messages (default: False)  
   -sos               Output received Status messages (default: False)  
 
-#### Example runtime scenarios  
+### Example runtime scenarios  
 Below are a few example scenarios with sample arguments
 
 **Connect to ADS, request MarketPrice items from ELEKTRON_DD service and display summary stats**  
@@ -54,7 +67,7 @@ Below are a few example scenarios with sample arguments
     -H ads1 -f srics.txt -u umer.nalla -X -l log.out
 
 **As above except mixed Domain RICs read from file extrics.txt (numeric domain|RIC per line)**  
-    -H ads1 -f srics.txt -u umer.nalla -X -l log.out
+    -H ads1 -ef extrics.txt -u umer.nalla -X -l log.out
 
 **Connect to EDP, request MarketPrice items from default service and display summary stats**  
     -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u GE-A-01103123-5-678 -pw *%GBiUSa16PsZHt5m2ufXyZAcg4ABC  
