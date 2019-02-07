@@ -1,5 +1,12 @@
 # Python Websocket API Test Client  
 
+* [Overview](#overview)
+* [Setup](#setup)
+* [Optional Arguments](#arguments)
+* [Example Runtime Scenarios](#runtime)
+
+## <a id="overview"></a>Overview 
+
 Python example that uses the Refinitiv Websocket interface to facilitate the consumption of realtime data.
 This example is meant to be a simplistic version of the 'rmdstestclient' tool and illustrates a variety of scenarios such as:  
 * EDP or ADS connection
@@ -10,7 +17,7 @@ This example is meant to be a simplistic version of the 'rmdstestclient' tool an
 ## Disclaimer  
 The source code presented in this project has been written by Refinitiv solely for the purpose of illustrating the concepts of using the Websocket interface.  None of the code has been tested for a usage in production environments.
 
-## Setup 
+## <a id="setup"></a>Setup 
 ### Windows/Linux/macOS
 1. __Install Python__
     - Go to: <https://www.python.org/downloads/>
@@ -21,37 +28,54 @@ The source code presented in this project has been written by Refinitiv solely 
       - `pip install requests`
       - `pip install websocket-client`
 	  **The websocket-client must be version 0.49 or greater**
+3. __Login Credentials__
+    - You will need the following:
+      - To Login to an ADS server 
+        - the hostname/ip + port number of the ADS  
+        - DACS username  
+      - For EDP connection  
+        - EDP server data url
+        - EDP Authentication server url
+        - Your EDP username and password
+  
+
+## <a id="arguments"></a>Optional arguments:  
 
 
+| Argument | Description                              |
+|-----------|------------------------------------------|
+| -h        | Show this help message and exit          |
+| -S        | Service name to request from (default: None - however, server typically has default) |
+| -H        | Hostname of ADS server or EDP endpoint (default: ads1) |
+| -ah       | Authorization server (default: api.edp.thomsonreuters.com) |
+| -p        | Port of the ADS server or EDP (default: 15000) |
+| -ap       | Port of the authorisation server (default: 443) |
+| -u        | Login user name (default: your local os username) |
+| -pw       | Specify EDP user password to connect to EDP (default: None) |
+| -pos      | Application position (default: your local IP address) |
+| -aid      | Application Identifier (default: 256)    |
+| -items    | comma-separated list of RICs (default: None) |
+| -vfids    | comma-separated list of Field IDs for View (default: None) |
+| -vnames   | comma-separated list of Field Names for View (default: None) |
+| -f        | Filename of simple RICs - one per line (default: None) |
+| -ef       | Filename of multi domain RICs - e.g. 6\|VOD.L (default: None) |
+| -md       | Domain Model (default:None - however, server defaults to MarketPrice)      |
+| -t        | Snapshot request (default: False)        |
+| -X        | Output Received JSON Data messages to console (default: False) |
+| -l        | Redirect console to filename (default: None) |
+| -e        | Auto Exit after all items retrieved (default: False) |
+| -et       | Exit after time in minutes (0=indefinite) (default: 0) |
+| -st       | Show Statistics interval in seconds (default: 10) |
+| -ss       | Output the JSON messages sent to server (default: False) |
+| -sp       | Output Ping and Pong heartbeat messages (default: False) |
+| -sos      | Output received Status messages (default: False) |
 
-#### Optional arguments:  
-  -h, --help         show this help message and exit  
-  -S SERVICE         service name to request from (default: None - server typically has default)  
-  -H HOST            hostname of ADS server or EDP endpoint (default: ads1)  
-  -ah AUTHHOSTNAME   authorization server (default: api.edp.thomsonreuters.com)  
-  -p PORT            port of the ADS server or EDP (default: 15000)  
-  -ap AUTHPORT       port of the authorisation server (default: 443)  
-  -u USER            login user name (default: your local os username)  
-  -pw PASSWORD       Specify EDP user password to connect to EDP (default: None)  
-  -pos POSITION      application position (default: your local IP address)  
-  -aid APPID         application Identifier (default: 256)  
-  -items ITEMLIST    comma-separated list of RICs (default: None)  
-  -vfids VIEWFIDS    comma-separated list of Field IDs for View (default: None)  
-  -vnames VIEWNAMES  comma-separated list of Field Names for View (default: None)  
-  -f RICFILE         filename of simple RICs - one per line (default: None)  
-  -ef RICFILEEXT     filename of multi domain RICs - e.g. 6|VOD.L (default: None)  
-  -md DOMAIN         domain model (default: MarketPrice)  
-  -t                 Snapshot request (default: False)  
-  -X                 Output Received JSON Data messages to console (default: False)  
-  -l LOGFILENAME     Redirect console to filename (default: None)  
-  -e                 Auto Exit after all items retrieved (default: False)  
-  -et EXITTIME       Exit after time in minutes (0=indefinite) (default: 0)  
-  -st STATSTIMESECS  Show Statistics interval in seconds (default: 10)  
-  -ss                Output the JSON messages sent to server (default: False)  
-  -sp                Output Ping and Pong heartbeat messages (default: False)  
-  -sos               Output received Status messages (default: False)  
 
-### Example runtime scenarios  
+ 
+
+    
+  
+## <a id="runtime"></a>Example runtime scenarios  
 Below are a few example scenarios with sample arguments
 
 **Connect to ADS, request MarketPrice items from ELEKTRON_DD service and display summary stats**  
