@@ -33,6 +33,7 @@ simpleRicList = []    # List of RICs to request
 domainRicList =[]   # List of RICs with Domain specified
 viewList = []   # List of Fields (FIDs or Names) to use in View Request
 domainModel = None  # Websocket interface defaults to MarketPrice if not specified
+serviceName = None  # EDP or ADS typically has a default service configured
 snapshot = False    # Make Snapshot request (rather than the default streaming)
 dumpRcvd = False    # Dump messages received from server
 dumpPP = False      # Dump the incoming Ping and outgoing Pong messages
@@ -73,8 +74,9 @@ def set_Login(u,a,p,t,e):
     edp_mode=e
 
 # Data request related parameters
-def set_Request_Attr(rList,rdm,snap, dmList):
-    global simpleRicList,domainModel,snapshot, domainRicList
+def set_Request_Attr(service,rList,rdm,snap, dmList):
+    global simpleRicList,domainModel,snapshot, domainRicList, serviceName
+    serviceName=service
     simpleRicList=rList
     domainModel=rdm
     snapshot=snap
@@ -204,11 +206,13 @@ def send_multi_domain_data_request(ws, streamID):
         streamID += len(rics)   
 
 
-# Make a Batch request for all the RICs in ricList
-# specify any required Views and Domains etc. 
+# Make a Batch request for all the RICs in ricList 
+# with any specified Views and Domains etc. 
 def send_single_domain_data_request(ws, domain, ricList, streamID):
     global reqCnt
     """ Create and send Market Data request for a single Domain type"""
+    
+    # increment the data items requested count
     reqCnt += len(ricList)
 
     mp_req_json = {
@@ -218,28 +222,39 @@ def send_single_domain_data_request(ws, domain, ricList, streamID):
         },
     }
 
-    #mp_req_json['ID'] = streamID
+    # If user specified a service add it to the request
+    # otherwise server will use any server configured default 
+    if serviceName:
+        mp_req_json['Key']['Service'] = serviceName
 
+    # If user specified a view and/or domain add them to the request
     if (len(viewList)>0):
         mp_req_json['View'] = viewList
     if (domain!=None):
         mp_req_json['Domain'] = domain
+    
+    # Did user specify Snapshot Mode - if so override Streaming default of True
     if snapshot:
         mp_req_json['Streaming'] = False
 
+    # Send the Data request to the server
     ws.send(json.dumps(mp_req_json))
     if (dumpSent):
         print("SENT MP Request:")
         print(json.dumps(mp_req_json, sort_keys=True, indent=2, separators=(',', ':')))
 
-
+# Refreshed auth token so send login request again
 def reissue_token(ws, token):
     global auth_token
     auth_token = token
     send_login_request(ws, True)
 
+# Send a Login request - for ADS or EDP
 def send_login_request(ws, is_refresh_token=False):
     """ Generate a login request from command line data (or defaults) and send """
+    
+    # Set common values for EDP and ADS login
+    # Note StreamID is 1
     login_json = {
         'ID': 1,
         'Domain': 'Login',
@@ -250,14 +265,14 @@ def send_login_request(ws, is_refresh_token=False):
             }
         }
     }
-
     login_json['Key']['Elements']['ApplicationId'] = app_id
     login_json['Key']['Elements']['Position'] = position
 
+    # EDP login request authentication token / ADS requires username
     if (edp_mode):  # Connected to EDP
         login_json['Key']['NameType'] = 'AuthnToken'
         login_json['Key']['Elements']['AuthenticationToken'] = auth_token
-        # If the token is a refresh token, this is not our first login attempt.
+        # If the auth token is a refresh token, this is not our first login attempt.
         if is_refresh_token:
             login_json['Refresh'] = False
     else:   # TREP ADS connection
@@ -268,6 +283,7 @@ def send_login_request(ws, is_refresh_token=False):
         print("SENT Login Request:")
         print(json.dumps(login_json, sort_keys=True, indent=2, separators=(',', ':')))
 
+# Send a Logout request to server - with StreamID 1
 def send_login_close(ws):
     logout_json = {
         'Domain': 'Login',
@@ -279,7 +295,7 @@ def send_login_close(ws):
         print("SENT Logout Request:")
         print(json.dumps(logout_json, sort_keys=True, indent=2, separators=(',', ':')))
 
-
+# Received a JSON message payload from server
 def on_message(ws, message):
     """ Called when message received, parse message into JSON for processing """
     message_json = json.loads(message)
@@ -287,6 +303,7 @@ def on_message(ws, message):
         print("RCVD: ")
         print(json.dumps(message_json, sort_keys=True, indent=2, separators=(',', ':')))
 
+    # extract and process individual messages
     for singleMsg in message_json:
         process_message(ws, singleMsg)
     # We have received a message from server - so reset the Ping timeout

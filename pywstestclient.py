@@ -123,7 +123,7 @@ def parse_args(args=None):
                        
     parser.add_argument('-S', dest='service',
                         help='service name to request from',
-                        required='True')
+                        default=None)
     parser.add_argument('-H', dest='host',
                         help='data server hostname / endpoint',
                         default='ads1')
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         opts.snapshot=True
         print("AutoExit selected so enabling Snapshot mode too")
 
-    market_data.set_Request_Attr(simpleRics,opts.domain,opts.snapshot,extRics)
+    market_data.set_Request_Attr(opts.service,simpleRics,opts.domain,opts.snapshot,extRics)
 
     if (opts.viewNames!=None):
         vList = opts.viewNames.split(',')
