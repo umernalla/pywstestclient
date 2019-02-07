@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+#|-----------------------------------------------------------------------------
+#|            This source code is provided under the Apache 2.0 license      --
+#|  and is provided AS IS with no warranty or guarantee of fit for purpose.  --
+#|                See the project's LICENSE.md for details.                  --
+#|           Copyright Refinitiv 2019. All rights reserved.                  --
+#|-----------------------------------------------------------------------------
+
 import time
 import argparse
 import sys
@@ -9,6 +17,10 @@ import websocket
 import json
 import threading
 from threading import Thread, Event
+
+# Python example that uses the Refinitiv Websocket interface to facilitate the consumption of realtime data.
+# This example is meant to be a simplistic version of the 'rmdstestclient' tool and illustrates a variety of scenarios such as:  
+#  EDP or ADS connection, Batch / View Request, Streaming / Snapshot, Reuters Domain Models
 
 # Global Variables
 simpleRics=None
@@ -359,5 +371,6 @@ if __name__ == '__main__':
         market_data.print_stats()
 
     sys.stdout = orig_stdout
+#
 #
 #

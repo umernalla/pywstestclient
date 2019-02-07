@@ -1,4 +1,4 @@
-# Python Websocket API Test Client
+# Python Websocket API Test Client  
 
 Python example that uses the Refinitiv Websocket interface to facilitate the consumption of realtime data.
 This example is meant to be a simplistic version of the 'rmdstestclient' tool and illustrates a variety of scenarios such as:  
@@ -6,6 +6,9 @@ This example is meant to be a simplistic version of the 'rmdstestclient' tool an
 * Batch / View Request
 * Streaming / Snapshot
 * Reuters Domain Models
+
+## Disclaimer  
+The source code presented in this project has been written by Refinitiv solely for the purpose of illustrating the concepts of using the Websocket interface.  None of the code has been tested for a usage in production environments.
 
 ## Setup 
 ### Windows/Linux/macOS

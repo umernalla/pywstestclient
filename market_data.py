@@ -2,12 +2,11 @@
 #|            This source code is provided under the Apache 2.0 license      --
 #|  and is provided AS IS with no warranty or guarantee of fit for purpose.  --
 #|                See the project's LICENSE.md for details.                  --
-#|           Copyright Thomson Reuters 2017. All rights reserved.            --
+#|           Copyright Refinitiv 2019. All rights reserved.                  --
 #|-----------------------------------------------------------------------------
 
-
 #!/usr/bin/env python
-""" Simple example of requesting Reuters domain Models using Websockets """
+""" Example of requesting Reuters domain Models using Websockets with Views / Streaming / Snapshot """
 
 import sys
 import time

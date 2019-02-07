@@ -1,4 +1,4 @@
-TRI.N
+VOD.L
 /BICP.PA
 /LSG.OL
 /VOSG.DE
