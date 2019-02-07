@@ -57,7 +57,7 @@ Below are a few example scenarios with sample arguments
     -H ads1 -f srics.txt -u umer.nalla -X -l log.out
 
 **Connect to EDP, request MarketPrice items from default service and display summary stats**  
-    -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u GE-A-01103867-3-729 -pw *%GBiUSa16PsZHt5m2ufXyZAcg4ABC  
+    -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u GE-A-01103123-5-678 -pw *%GBiUSa16PsZHt5m2ufXyZAcg4ABC  
 
 
     
