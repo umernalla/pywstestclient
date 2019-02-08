@@ -16,6 +16,7 @@ import json
 import websocket
 import threading
 from threading import Thread, Event
+from collections import defaultdict
 
 # Global Default Variables for connection
 hostname = 'localhost'      # Data server 
@@ -191,12 +192,13 @@ def send_multi_domain_data_request(ws, streamID):
 
     """ Group Market Data request by Domain type """
     """ and then make batch request for each group """
-    grouped = {}
+    grouped = defaultdict(list)
     # Create lists grouped by Domain Type
-    for d, ric in domainRicList:
-        grouped.setdefault(d, []).append(ric)
-    #print(grouped)
+    for domain, ric in domainRicList:
+        grouped[domain].append(ric)
     
+    #print(grouped)
+
     # For each Domain type group, call the data request method
     for i, (domain, rics) in enumerate(grouped.items()):
         send_single_domain_data_request(ws, domain, rics, i + streamID)

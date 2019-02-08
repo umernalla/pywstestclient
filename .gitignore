@@ -12,3 +12,6 @@ __pycache__/market_data.cpython-37.pyc
 >>>>>>> 9dab4f0de8ce7b2794cd7f59d30520c72706a927
 __pycache__/
 .vscode
+log.out
+log2.out
+log*.*
