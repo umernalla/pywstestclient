@@ -24,10 +24,8 @@ The source code presented in this project has been written by Refinitiv solely 
     - Select the __Download tile__ for the Python 3 version
     - Run the downloaded `python-<version>` file and follow installation instructions
 2. __Install libraries__
-    - Run (in order):
-      - `pip install requests`
-      - `pip install websocket-client`
-	  **The websocket-client must be version 0.49 or greater**
+    - Run the following (which installs 'requests' and 'websocket-client'):
+      - `pip install -r requirements.txt`
 3. __Login Credentials__
     - You will need the following:
       - To Login to an ADS server 
@@ -59,7 +57,7 @@ The source code presented in this project has been written by Refinitiv solely 
 | -vnames   | comma-separated list of Field Names for View (default: None) |
 | -f        | Filename of simple RICs - one per line (default: None) |
 | -ef       | Filename of multi domain RICs - e.g. 6\|VOD.L (default: None) |
-| -md       | Domain Model (default:None - however, server defaults to MarketPrice)      |
+| -md       | Domain Model (default:None - however, server defaults to MarketPrice)<br>Accepts numeric or name e.g. 6 or MarketPrice, 7 or MarketByOrder, 8 or MarketByPrice etc |
 | -t        | Snapshot request (default: False)        |
 | -X        | Output Received JSON Data messages to console (default: False) |
 | -l        | Redirect console to filename (default: None) |
@@ -78,6 +76,9 @@ The source code presented in this project has been written by Refinitiv solely 
 ## <a id="runtime"></a>Example runtime scenarios  
 Below are a few example scenarios with sample arguments
 
+**Connect to EDP, request MarketPrice items from default service and display summary stats**  
+    -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u \<EDP Username\> -pw \<EDP Password\>   
+    
 **Connect to ADS, request MarketPrice items from ELEKTRON_DD service and display summary stats**  
     -S ELEKTRON_DD -H ads1 -items VOD.L,MSFT.O,TRI.N -u umer.nalla
     
@@ -90,14 +91,20 @@ Below are a few example scenarios with sample arguments
 **As above with output redirected to file log.out**  
     -H ads1 -items VOD.L,MSFT.O,TRI.N -u umer.nalla -X -l log.out
 
-**As above except RICs read from file srics.txt (one RIC per line)**  
+**As above except request MarketByPrice data**  
+    -H ads1 -md MarketByPrice -items VOD.L,BT.L,BP.L -u umer.nalla -X -l log.out
+
+**As above except using numeric Domain value**  
+    -H ads1 -md 8 -items VOD.L,BT.L,BP.L -u umer.nalla -X -l log.out
+
+**MarketPrice request for RICs read from file srics.txt (one RIC per line)**  
     -H ads1 -f srics.txt -u umer.nalla -X -l log.out
+
+**MarketByOrder request for RICs read from file srics.txt (one RIC per line)**  
+    -H ads1 -f srics.txt -md MarketByOrder -u umer.nalla -X -l log.out
 
 **As above except mixed Domain RICs read from file extrics.txt (numeric domain|RIC per line)**  
     -H ads1 -ef extrics.txt -u umer.nalla -X -l log.out
-
-**Connect to EDP, request MarketPrice items from default service and display summary stats**  
-    -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u \<EDP Username\> -pw \<EDP Password\>   
 
 
     
