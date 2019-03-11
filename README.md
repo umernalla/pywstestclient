@@ -77,7 +77,7 @@ The source code presented in this project has been written by Refinitiv solely 
 Below are a few example scenarios with sample arguments
 
 **Connect to EDP, request MarketPrice items from default service and display summary stats**  
-    -H emea-1.pricing.streaming.edp.thomsonreuters.com -items VOD.L,BT.L -u \<EDP Username\> -pw \<EDP Password\>   
+    -H emea-1.pricing.streaming.edp.thomsonreuters.com -p 443 -items VOD.L,BT.L -u \<EDP Username\> -pw \<EDP Password\>   
     
 **Connect to ADS, request MarketPrice items from ELEKTRON_DD service and display summary stats**  
     -S ELEKTRON_DD -H ads1 -items VOD.L,MSFT.O,TRI.N -u umer.nalla
