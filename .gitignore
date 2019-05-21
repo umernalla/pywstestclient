@@ -15,3 +15,7 @@ __pycache__/
 log.out
 log2.out
 log*.*
+edp.log
+runads3k.bat
+runedp3k.bat
+runtrep.sh
